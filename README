@@ -1,0 +1,301 @@
+NAME
+    E Editor - Perl/Tk text text-editor featuring code highlighting,
+    multiple-tabs, and more.
+
+AUTHOR
+    Jim Turner
+
+    (c) 1999-2023, Jim Turner, under the same license that Perl 5 itself is.
+    All rights reserved.
+
+LICENSE AND COPYRIGHT
+    Copyright (c) 1999-2023 Jim Turner.
+
+    E Editor is free software; you can redistribute it and/or modify it
+    under the terms of the GNU Lesser General Public License as published by
+    the Free Software Foundation; either version 2.1 of the License, or (at
+    your option) any later version.
+
+    This program is distributed in the hope that it will be useful, but
+    WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU Lesser
+    General Public License for more details.
+
+    You should have received a copy of the GNU Lesser General Public License
+    along with this program; if not, write to the Free Software Foundation,
+    Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
+
+SYNOPSIS
+            <e.pl> [I<-options>] [file1 [-tabs file2 file3 ...]]
+
+            <e.pl> [I<-options>] file1 file2  #FOR SPLIT-SCREEN EDITING
+
+            <v.pl> [I<-options>] [file1 [-tabs file2 file3 ...]]  #VIEWING
+
+DESCRIPTION
+    E Editor provides a convenient screen text editor for editing text files
+    and source-code files, etc. E features language-based color-syntax
+    highlighting, bracket-matching and jumping, and syntax-checking for Perl
+    and C sources, quick-eval and quick-run for Perl sources. General
+    features include multiple browser tabs and split-screen option for
+    editing multiple files at once. Named bookmarks, easy search and
+    replace, easy auto and manual file backup, and recent file and
+    search-term memory, and an open-readonly option. Depending on what's
+    available on your system, E can use any one of a number of installed
+    Tk::Text-derived widgets for it's editing screen, for example,
+    Tk::TextHighlight, Tk::Text::SuperText, Tk::TextUndo, etc. To use E
+    Editor as a (readonly) viewer, simply symlink "v.pl" to "e.pl". Drag and
+    Drop files is available for M$-Windows users.
+
+OPTIONS
+    -bg=*background-color*
+        Change (default unhighlighted) text foreground color. Default:
+        *green*. NOTE: Can also be combined with -c and -palette.
+
+    -fg=*foreground-color*
+        Change (default unhighlighted) text-area background color. Default:
+        *black*. NOTE: Can also be combined with -c and -palette.
+
+    -c=*color-palette-name*
+        (Color palette) - Same as -palette, see below. Name of color-palette
+        to use, specified in .Xdefaults. Default (.Xdefaults: *tkPalette*
+        for editor, *tkVPalette* for viewer; or, the system's default
+        Xwindows colors, if not specified. NOTE: Overridden by the -theme
+        option, if specified.
+
+    -codetext=*[Kate::]Language*
+        Selects which language to use for syntax-highlighting. Depending on
+        whether -[editor|-viewer] mode is being used, can be any one of:
+        Default determined, if possible from the file extension or the first
+        line ("#!...") of the file, otherwise, none. Valid *Language* values
+        are: *None*, *Bash*, *Perl*, *Perl*, *PerlCool*, *Xresources*, and,
+        if Syntax::Highlight::Engine::Kate is installed, any of the many
+        *Kate::language* values.
+
+    -editor=*module*
+        (editor - e.pl): Should be based on Tk::Text. The "Tk::" is omitted.
+        Known to work: *Text*, *TextANSIColor*, *SuperText*, and
+        *TextHighlight*. Default: *Text*.
+
+    -f=*/path/to/fontfile*
+        Default: *./.myefonts|~/.myefonts|<programhome*/myefonts>. Text file
+        containing list of font definitions to use in the font-selection
+        dialog. Format of text file (each line): IndexCharacter
+        Description:unix-font-string
+
+        Example line: A Normal-17
+        LT:-*-lucidatypewriter-medium-r-normal-*-17-*-100-100-*-*-*-*
+
+        Select this font with "-font=A" or to make default, make this the
+        first line in the "~/.myefonts" file. See myefonts (file included)
+        for examples.
+
+    -font=*#|id|font-name|unix-font-string*
+        Specify the index# or id (in font file) or the Unix font string to
+        use as the default text font. Default: *0* (1st font in font-file).
+
+    -wf|-tf|-sf|-lf|-hf
+        Specify a starting font-size: (weensey font, tiny font, small font,
+        large font, or huge font. NOTE: This overrides any "font" option
+        specified in the *.ini files.
+
+    -height=*#*
+        Specify number of *lines* to show at start (starting window height).
+        Default: *25*.
+
+    -width=*#*
+        Specify number of *characters* wide to start (starting window
+        width). Default: *80*.
+
+    -histFile=*/path/to/file*
+        File to save history of last several opened files for quick recall
+        in the file open dialog. Default: *~/.myehist*
+
+    -histmax=*#*
+        Number of recently edited/viewed files to be kept in the dropdown
+        list in the file open dialog. Default: *16*.
+
+    -homedir=*path*
+        User's "HOME" directory for looking for configuration files, such as
+        ".myefonts", ".myethemes", etc. Default: *~/* ($HOME).
+
+    -kandrstyle=*0|1|2*
+        Specify K&R-style Perl stmts. when inserting into code or
+        reformatting. *0*: "if ()\n{"; *1*: "if (){"; *2*: "if () {".
+        Default: *0* (vertically-aligned, non-K&R style) formatting.
+
+    -l=*line#[.col#]*
+        Start with cursor on that line# / column#. NOTE: Line#s are
+        one-based, but column#s are zero-based! Default: *1.0* (the
+        beginning of the file).
+
+    -nb (editor only) - Causes the file not to be auto-backed up when
+        opened. Default: auto-backup when opening a file.
+
+    -nobrowsetabs
+        Do not do multitab browsing (maximum open files is then limited to 2
+        (via split-screen), but provides for a slightly smaller window
+        (vertically). Default: (multi-tab browing enabled and at least one
+        tab shows).
+
+    -notabs=*0|1*
+        Pad indentations with 0=tabs, or 1=spaces. Default: *0*: tabs.
+
+    -palette=*color-palette-name*
+        Name of color-palette to use, specified in .Xdefaults. Default
+        (.Xdefaults: *tkPalette* for editor, *tkVPalette* for viewer; or,
+        the system's default Xwindows colors, if not specified. NOTE:
+        Overridden by -theme option, if specified.
+
+    -pathFile=*/path/to/file*
+        Configuration file containing list of "favorite" directories/folders
+        in a drop-down list in the file open dialog box. Format of text file
+        (each line): /some/path;Comment Default: *~/.myepaths*
+
+    -s=*"string"*
+        Start with cursor on 1st match of "*string*".
+
+    -savemarks=*0|1*
+        Whether to save bookmarks when saving file. Bookmarks are saved in a
+        separate file (with the extension: .emk). 1: Save bookmark locations
+        automatically when file is saved (if any set). 0: Don't (user must
+        specifically save them) in the [File].[Save w/Marks] menu option.
+        Default: (editor: *1*, viewer: *0*).
+
+    -tabspacing=*#*
+        Number of spaces equivalent to a tab when indenting. Default: *3*.
+
+    -theme=*themename*
+        Name of color theme to start up in. For list of themes, view/edit
+        ~/.myethemes. If -fg or -bg are also specified, they override for
+        the text widget whatever colors are specified in ~/.myethemes file
+        for <themename>. Format of text file (each line):
+
+        Themename:$c="*color*"|""|DEFAULT; $fg="*color*"|same;
+        $bg="*color*|same">
+
+        "*color*" can be a color-name or "#rrggbb". See *myethemes* (file
+        included) for examples.
+
+    -viewer=*module*
+        (viewer - v.pl): Same as for -editor, but applies to v.pl
+        (viewer-mode). Should be based on Tk::ROText. The "Tk::" is omitted.
+        Known to work: *ROText*, *ROTextANSIColor*, *ROSuperText*,
+        *ROTextHighlight*, and *XMLViewer*. Default: *ROText*.
+
+    You can also specify the above options in an "ini" file, (e.ini for
+    editor mode and v.ini for viewer mode).
+
+    Example, I use TextHighlight when editing code, so symlinked ec.pl to
+    e.pl for highlighted code-editing, and set up a file (ec.ini)
+    containing:
+
+                    editor=TextHighlight
+
+RESOURCES
+    tktextcutchars
+        List of "cut-characters" used by Tk.
+
+    tkPalette
+        Default palette color for this and some other Perl/Tk applications.
+
+    tkVpalette
+        Default palette color for the "viewer" (v.pl) version of this
+        program.
+
+FILES
+    e.pl
+        Main program script source.
+
+    v.pl
+        Symlink to e.pl which, when run, is readonly.
+
+    ~/.ebackups
+        Data file that specifies the maximum number of backup files to keep
+        and the number of the latest backup file index number. Single line
+        of text in the format:
+
+        *max-number-of-backups-to-keep*,*last-backup-file-number*
+
+    ~/.myefonts (or *program-home*/myefonts
+        Font configuration file (for list of fonts available in the [Fonts]
+        dropdown menu).
+
+    ~/.myehist
+        Program-created "history" list of last several files opened.
+
+    ~/.myemimes (or *program-home*/myemimes
+        User-created mime-configuration text file for syntax-highlighting
+        special cases. Line Format: *file-extension*:*[Kate::]Language*
+
+        Example1: mod:Kate::Modula-2 Example2: tmpl:HTML
+
+        See -codetext option.
+
+    ~/.myepaths
+        List of favorite directories with optional descriptive names for use
+        in the file-open dialog. Optional, user-created.
+
+    ~/.myeprint
+        Program-created data file containing printer command last used by
+        the [File].[Print] dialog.
+
+    ~/.myeprofiles
+        Optional user-created file listing directories for which an
+        alternate directory should be searched for an e.ini configuration
+        file. This is useful for remote servers on which an e.ini file can
+        or should not be stored.
+
+        Line format:
+        *directory-edited-file-is-in*:*directory-ini-file-is-in*
+
+    ~/.myethemes (or *program-home*/myethemes
+        Theme configuration file (for list of themes available in the
+        [Themes] dropdown menu).
+
+    ./*program-name*.ini
+        Optional user-created text configuration file for specifying default
+        options for *program-name*.pl. Normally *program-name* will be
+        *"e"*. A separate one should be used for the viewer symlink (*"v"*.
+        It may be desirable to create other symlink names in order to use
+        other corresponding *.ini files. The program searches for these .ini
+        files in the order: 1) The directory the file being edited, 2) The
+        directory pointed to by ~/.myeprofiles, if the directory the file
+        being edited in is in that list, 3) The user's home directory
+        (*~/*), and last, the directory the program script is in, (often
+        /usr/local/share/E/, if the program lives in /usr/local/bin/). The
+        search stops when one is found.
+
+    ./*filename*.emk
+        Program-created file containing bookmark indices and tag data
+        created in the same directory (if possible) of the *filename* being
+        edited and saved.
+
+    ~/tmp/e.*index-number*.tmp
+        Program-created file for backup copies of file being edited.
+        *index-number* is a sequence number derived from the "rolodex"
+        maintained by ~/.ebackups.
+
+    /tmp/e_*type-letter*Tab*tab#*W*window#*_*filename*_<random-number>.tmp
+        Auto-backup and manual temporary backup files from the
+        [File].[Backup /tmp] menu options. *type-letter* is either "B" -
+        auto open backup, "U" - user-requested temp. backup from menu, or
+        "X" - auto exit backup.
+
+KEYWORDS
+    editor viewer perl Tk
+
+DEPENDS
+    perl File::Copy Text::Tabs Tk Tk::JDialog Tk::JBrowseEntry
+    Tk::JFileDialog Tk::ColorEditor Tk::Adjuster Tk::NoteBook Tk::TextUndo
+    <Cwd getopts.pl setPalette.pl JCutCopyPaste.pl
+
+RECOMMENDS
+    Tk::Autoscroll File::Glob Tk::XMLViewer Tk::Text::SuperText
+    Tk::Text::ROSuperText
+
+    For code syntax-highlighting: Tk::TextHighlight Tk::ROTextHighlight
+    Syntax::Highlight::Perl::Improved Syntax::Highlight::Engine::Kate
+
+    For M#-Windows: File::Spec::Win32 Tk::DragDrop::Win32Site Tk::DropSite
+

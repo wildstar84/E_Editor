@@ -1,0 +1,158 @@
+INSTALLATION
+
+To install, simply copy the file "e.pl" to somewhere in your executable PATH, 
+ie. "/usr/local/bin/" and give users read & execute permissions on it.
+Then create a symlink in the same directory to it named "v.pl".  Copy the 3 
+files starting with "e_*.pl" and the other ".pl" files to one of your Perl 
+library directories ie. "/usr/local/lib/site_perl/".  To determine this, do 
+a "perl -V".  
+
+You will also need to copy the files "myefonts", "myethemes", and "ebackups" 
+to your home directory, edit them with e.pl or another text editor to fit 
+your desires, then RENAME THEM such that they have the same names but with a 
+leading dot ("."), ie. ".myefonts".
+
+NOTE:  This program requires the following modules:  File::Copy, 
+Tk (obviously), Tk::JDialog, Tk::JFileDialog, Tk::JOptionmenu, 
+Tk::Adjuster, and Text::Tabs.  It can optionally make use of: 
+File::Glob, Tk::TextHighlight (Code text highlighting), Tk::Text::SuperText 
+(Bracket matching, numerous other cool features) Tk::Autoscroll, 
+Tk::TextANSIColor (Color "Tags"), Tk::XMLViewer (Viewing XML files as a tree), 
+Syntax::Highlight::Perl (required by Tk::TextHighlight), 
+Syntax::Highlight::Perl::Improved (usable by Tk::TextHighlight), 
+and Syntax::Highlight::Engine::Kate (usable by Tk::TextHighlight), 
+though none of these modules are required unless you wish to use their 
+features. 
+
+If you do not want the program to make automatic backups when opening a new 
+file, simply delete ".ebackups" from your home directory.  The default is to 
+keep the last 20 backups, to change this, edit this file and change the 1st 
+number (from 19 to 1 less than desired number).  Create a "tmp" subdirectory 
+under your home directory.  Backups will be created there in sequence as 
+"e.#.tmp" where "#" is a number between 0 and the number of backups you set 
+up.  After # exceeds that number, it cycles back to zero (e.0.tmp).
+
+This script needs Perl, and Tk.  The Perl/Tk module:  "Text::SuperText", 
+available on CPAN, is NO LONGER REQUIRED, but adds bracket-matching!  
+"e.pl" also works on Windows and can be compiled with "perl2exe" or PAR, 
+but I can't post the binary, since I have not purchased a registered copy 
+of (commercial) perl2exe :-(.  Also note, compiling within the editor does not 
+seem to work in the Windows 95/98 version and I haven't figured out why.  
+It has to do with shelling out.  If anyone can figure this out (e_pl.pl), 
+please send me a patch!  It seems to work fine in Windows-NT/XP, though.  
+You may also want my "setPalette" module, if you are setting the palette color 
+to a dark value, ie.:  "e.pl -c=darkblue edit_file.txt &".
+
+To create a view-only version of the editor, symlink "v.pl" to "e.pl".
+Invoke as "e.pl [-options] file" or "v.pl [-options] file".
+
+Note:  The following options may also be specified one per line, or in 
+configuration files named after the corresponding executable, ie. e.ini, v.ini, 
+ec.ini, vc.ini, etc.) without the preceeding "-".  
+
+This configuration file will be searched for 1st in the current working 
+directory, then the parent directory up to root (/), then the program 
+directory.  Note:  It does NOT look in the home directory unless the current 
+working directory is at or below the home directory though!
+
+Options:
+
+	e.pl -c=color		(set palette)
+	-editor=module  (default TextUndo).  Tk Text-widget-based module 
+		to use.  Known to work:  Text, TextUndo, SuperText, 
+		TextANSIColor, and TextHighlight.
+	-viewer=module  (v.pl)  (default ROText).  Same as for -editor, but 
+		applies to v.pl (viewer-mode).  Should be based on ROText.  
+		Known to work:  ROText, ROTextANSIColor, ROSuperText, 
+		ROTextHighlight, and XMLViewer.
+	-codetext=[Kate::]Language   Used with -[editor|viewer]=*TextHighlight
+		Selects which language highlighter to use with TextHighlight /
+		ROTextHighlight.  Default is based on file-extension or "Perl".
+	-theme=<themename>  No default - Name of color theme to start up in - 
+		For list of themes, view/edit ~/.myethemes  If -fg or -bg are 
+		also specified, they override for the text widget whatever 
+		colors are specified in ~/.myethemes for <themename>.  
+		Format of text file (each line):  
+			Themename:$c="color"|""|DEFAULT; $fg="color"|same; $bg="color|same"
+			"color" can be a color-name or "#rrggbb".
+			See myethemes (file included) for examples.
+	-palette=<palette> - Default (.Xdefaults: tkPalette)  (tkVPalette 
+		for viewer (v.pl)).  Overridden by -theme option, if specified.
+	-fg=foreground,
+	-bg=background   (change foreground and background)
+		(default:  -fg=green -bg=black)
+		(You can use these also with -c)
+	-nb  (editor only) - causes the file not to be auto-backed up when 
+		opened.
+	-l=line#[.col#]	(start with cursor on that line# / column#)
+		NOTE:  Lines#s are one-based, but column#s are zero-based!!!
+		Default (1.0)
+	-s="str"		(start with cursor on 1st match of "str").
+	-f=</path/to/fontfile>  Default:  ./.myefonts|~/.myefonts
+		|<programhome>/myefonts;   Text file containing list of font
+		definitions to use in the font-selection dialog.
+		Format of text file (each line):
+			IndexCharacter Description:unix-font-string
+			Example:  A Normal-17 LT:-*-lucidatypewriter-medium-r-normal-*-17-*-100-100-*-*-*-*
+			Select this font with "-font=A" or to make default, make 
+			this the first line in the "~/.myefonts" file.
+			See myefonts (file included) for examples.
+	-font=#|id|unix-font-string:  Specify the index# or id (in font file) 
+		or the Unix font string to use as the default text font.
+		Default 0 (1st font in font-file).
+	-wf|-tf|-sf|-lf|-hf	(start with weensey font, tiny font, 
+		small font, large font, or huge font - 
+		default is small font).
+	-width=#	 	Specify # characters wide to start(default 80).
+	-height=#		Specify # lines to show at start (default 25).
+	-kandrstyle=0|1|2   Specify K&R-style Perl stmts. when inserting 
+		into code. 0: "if ()\n{"; 1: "if (){"; 2: "if () {".
+	-notabs=0|1  Pad indentations with 0=tabs; 1=spaces
+	-classictabs=0|1  If specified and == 1, use classic Perl/Tk styling 
+		for Tk::Notebook (tabs) widget, otherwise use more modern GTK-3 
+		tab widget colors.
+	-tabspacing=#   Number of spaces equivalent to a tab when indenting.
+		Default 3.
+	-savemarks=0|1  1=Save bookmark locations automatically when file is 
+		saved (if any set).  0=Don't (user must specifically save them).
+	-histFile=</path/to/file>  Default:  ~/.myehist  File to save history 
+		of last several opened files for quick recall in file open dialog.
+	-pathFile=</path/to/file>  Default:  ~/.myepaths  Configuration file 
+		containing list of "favorite" directories/folders in a drop-down 
+		list in the file open dialog box.
+		Format of text file (each line):  /some/path;Comment
+	-histmax=#   Default 16.  Number of recently edited/viewed files to 
+		be kept in the dropdown list in the file open dialog.
+	-homedir=<path>  Default $HOME (~/).  User's "HOME" directory for 
+		looking for configuration files, such as ".myefonts", 
+		".myethemes",	etc.
+
+TEXT-HIGHLIGHTING AND INI OPTIONS FILES:
+
+You can also specify options in an "ini" file, (e.ini and/or v.ini).  
+For example, I use TextHighlight when editing Perl code, so I set up a 
+file (ec.ini) containing:
+
+editor=TextHighlight
+
+and did:
+
+	ln -s e.pl ec.pl
+
+This allows me to do "ec.pl file.pl" for syntax-highlighting!
+
+To use the syntax highlighting, first go to CPAN and install 
+Syntax::Highlight::Perl::Improved and Tk::TextHighlight.  Then either create 
+an e.ini file or specify the command-line options:
+
+e.pl -editor=TextHighlight [-codetext=Perl] myfile.pl
+	-or-
+v.pl -viewer=ROTextHighlight [-codetext=Perl] myfile.pl
+
+
+Enjoy the Ride! ;-)
+
+Jim Turner
+turnerjw784@yahoo.com
+
+See the Changes file for latest changes.

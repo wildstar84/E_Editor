@@ -1,0 +1,31 @@
+Windows:$c="";$fg=black;$bg=white;
+Cyan:$c=Cyan3; $fg=black;
+Pink:$c=DeepPink4; $fg=black;
+blue:$c=blue4; $fg=gray75;
+Yellow:$c="";$fg=yellow; $bg=black;
+White:$c="";$fg=white; $bg=black;
+Grey:$c="";$fg=gray75; $bg=black;
+green:$fg=green; $bg=black;
+violet:$fg="#2D0044"; $bg=black;
+red:$fg=red;
+amber:$c=""; $fg="#FE7800"; $bg=black;
+Violet:$c="#2D0044"; $fg=gray75
+Violet2:$c="#2D0044"; $fg=gray75; $bg=black
+Violet3:$c="#2D0044"; $fg="#CC50FF"; $bg=black
+Pepto:$c="#D9A8D9"; $fg=black
+kdebg:$c="#497986"; $fg=white
+Amber:$c="#FE7800"; $fg=black; $bg="#FE7800"
+Mocha:$c="#5A3C28"; $fg=white
+Emerald:$c="#003200"; $fg=gray75
+MozBlue:$c="#4650A9"; $fg=white
+RedFrame:$c=red; $fg=same; $bg=same;
+KdeFrame:$c="#497986"; $fg=same; $bg=same;
+KdeLook:$c="#497986"; $fg=white; $bg="#304D49";
+MozFrame:$c="#4650A9"; $fg=same; $bg=same;
+EmeraldFrame:$c="#003200"; $fg=same; $bg=same;
+VioletFrame:$c="#2D0044"; $fg=same; $bg=same;
+BlueFrame:$c=blue4; $fg=same; $bg=same;
+AmberFrame:$c="#FE7800"; $fg=same; $bg=same;
+MochaFrame:$c="#5A3C28"; $fg=same; $bg=same;
+DefaultFrame:$c=AntiqueWhite4; $fg=same; $bg=same;
+Default:$c=DEFAULT;$fg="";$bg="";

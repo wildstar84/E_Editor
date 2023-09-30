@@ -1,0 +1,196 @@
+Changes:
+
+3.2	 Mon Sep 17 2001
+		- Added Dynamic Font support - Now create a personal FONT file 
+		  containing the fonts you wish to use as ".myefonts".  See example 
+		  included with this distribution.  File-name overrideable with: 
+		  -f=fontfile.
+		- Added Print option to File menu for command to apply to selected 
+		  text or entire file.  Last command is saved in file ".myeprint".
+3.23	Fri Jan 11 2002
+		- Added themes, (move myethemes to .myethemes, and edit to suit).
+3.3	 Thu Mar 21 2002
+		- Added "-font" option, if numeric - specifies font on lin# in .myefonts 
+		  file; otherwise, specifies 1st word of a font name in .myefonts.
+		- Added auto-backup capability based on a new file stored in the 
+		  program's home directory called ".ebackups".  this file contains a 
+		  single line with a number, ie. 10. specifying the number of backup 
+		  files to save before overwriting existing ones in $HOME/tmp.  A 
+		  backup file is created whenever a new file is opened and contains 
+		  the contents of the just-opened file, and is named "e.##.tmp".
+		- Fixed problems with ability to stop processes in "Perl.Run" option.
+3.32 Tue Jul 2 2002
+		- Added manual backup menu option.
+		- Fixed Tk/MainLoop problem which caused cpu to be 100% utilized 
+		  in 3.31 (my laptop's noisy fan was always coming on)!
+3.42 Wed Jul 31 2002
+		- Fixed Perl.Run option stuff I broke in v3.32.
+		- Changed "/" to "\\" in several places when running under M$-Windows.
+		- Now looks for ".ebackups" in user's home directory instead of the 
+		  program's home directory (each user should have their own copy of 
+		  this file)!  (v3.41)
+		- Added the program's home directory to the path to search for the 
+		  "myfonts" file.  (v3.42)
+		- Provided better (more general) defaults for ".myefonts" and 
+		  ".myethemes".
+3.43 Fri Aug 6 2002
+		- Added "shebang" option to the Perl option to find the Perl interpreter 
+		  ("which perl") and add a "#!" line.  Cursor should be at (0,0).
+4.13 Thu Jul 27 2006
+		- Added -editor option to specify an alternate module to Tk::SuperText 
+		  so that one can use Tk::CodeText and do syntax highlighting.
+4.14 Thu Aug 31 2006
+		- Fixed Split-screen to better keep proper size in both Windows & 
+		  Linux.
+4.40 Mon Sep 3 2007
+		- Numerous minor enhancements, fixed disappearing text cursor pbm. 
+		  when palette theme changed from a dark to a light color.
+		- Switched from CodeText to TextHighlight as the highlighting 
+		  text widget of choice.
+4.42 Mon Sep 17 2007
+		- Minor fixes to make the AfterStep window-manager raise and give 
+		  focus to the proper window whenever a popup window is closed. 
+		  This only affects AfterStep when used in "ClickToFocus" mode.
+5.00	Wed Oct 15 2008
+		- Added multi-tab browsing via Tk::Notebook.  Rewrote bookmarks to 
+		  now have separate set of bookmarks for each tab and each split 
+		  screen within a tab.  Added -nobrowsetabs option to not use 
+		  tabbed-browsing (old, single screen way).  Fixed several small 
+		  bugs, binds, and optimizations.
+5.10 Mon Oct 27 2008
+		- Fix Windows compatability issues and release new self-installing 
+		  binary.
+5.12 Tue Oct 28 2008
+		- Fix auto-indent bug introduced in last version.
+5.13 Thu Oct 30 2008
+		- Fix very minor issues on Windows.
+5.25 Fri Jun 25 2010
+		- Cause files to be opened with cursor at "_bookmark", if set.
+5.26 Fri Jun 25 2010
+		- Fix bug that caused "Re-Highlight" menu items to be duplicated.
+5.31 Sat Aug 7 2010
+		- Numerous minor tweaks and bugfixes.  Added 0 and 'END' to list 
+		  of marks to goto using the "Highlight Goto" dropdown list.  
+		  One can also type in a line#.
+5.43 Tue Oct 5 2012
+		- Fixed Backup-On-Destroy to save files in all tabs - was erronously 
+		  saving only the file in right-most tab in the backups for all tabs.
+5.61		- Fix bug in selection of default startup directory / finding .ini 
+		  configuration file.
+5.71		- Add special code to mitigate keyboard-focusing issues due to a bug 
+		  specific to the Afterstep windowmanager and popup windows.
+5.8		- Combine the button row with the top menu to provide more 
+		  edit-screen space, correct padding of new buttons to look like the 
+		  existing menubuttons, and add "mb" option to allow separate button 
+		  bar to be displayed the old way (-mb=2 for 2 rows).
+5.81		- Fix bug that caused "Append" button to overwrite file instead.
+5.91 Wed Feb 3 2016
+		- Numerous cleanups and tweaks to release as a Windows install
+		  executable.
+5.92 Wed Feb 24 2016
+		- Make e read from stdin if "-" given as a file name.
+5.95 Thu Feb 16 2017
+		- Make Edit.Show Filename past full file name to PRIMARY selection.
+		- Added File.Open in Tab menu option to open filename(s) highlighted 
+		  in PRIMARY selection, great for opening additional files selected 
+		  in JFM4 an existing instance.
+5.96 -NOT RELEASED-
+		- Work around fix for bug that hung system in memory-gobbling loop 
+		  if [Control-[Tab]] pressed in the text box when Text::SuperText 
+		  or TextHighlight editing widgets used due to a bug in 
+		  Text::SuperText.
+5.97 -NOT RELEASED-
+		- Fixed issue of bookmarks not being saved on normal save and exit.
+		- Fixed issue with the drop-down list in the "Goto" popup window 
+		  that caused the field to be filled with "0.0" instead of empty and 
+		  instead of going to the selected bookmark button location, ie. 
+		  "Back", "Insert", etc. instead jumped to the top of the file and 
+		  highlighted all the text inbetween.
+5.98
+		- Fixed "Home Directory" issue in M$-Windows that prevented themes, 
+		  etc. from working properly.
+		- Make all menubuttons take focus and be included in the focus-loop.
+		- Bind the [Alt-[<]] and [Alt-[>]] keys to the Search next backwards 
+		and Search next forward functions of the corresponding menubuttons.
+		- Bind [Control-[Tab]] key to jump between the top and bottom 
+		sessons when editing screen is "split".
+		- Clean up the other [Tab]-key sequence bindings to work better.
+		- Clean up and greatly improve functionality of the "auto-save" 
+		features.  NOTE "auto-save" does NOT save on a periodic bases like 
+		many commercial-grade wordprocessors, but rather makes "backup" 
+		copy files with unique names in the "/tmp" directory when opening 
+		a file or closing without saving, or when the user selects "[File]
+		.[Back up /tmp *] options to save snapshots.
+5.99		- Add little button to full the wasted space in the lower right 
+		corner the scrollbars that jumps to position 0.0 ("home").
+6.00		- Append .cdout directory to unpathed filenames when opening, if 
+		it exists.
+6.10		- Fixed minor issues with dual-screen (screen-splitting) option.
+		- Fixed minor issues with AfterStep window-manager quirks code.
+		- Added POD documentation and manpage.
+6.11		- Fixed minor font-selection issue.
+		- Moved default program config. files from bin/ to share/E
+		- Fix expand-icon squares for XMLViewer to have white background 
+		when using "night" backgrounds.
+		- Deactivate old "Afterstep" windowmanager hacks since we fixed 
+		Afterstep!
+		- Add POD docs (to bottom of source file).
+		- Misc. code cleanups.
+6.12		- Fix bug causing wrong background color to sometimes be used in tags.
+		- Don't do search/replace if no search string specified.
+		- Don't say "found/changed" if no replacement string specified 
+		in searches.
+6.13		- Don't popup "Save Changes" dialog when opening a new file, if 
+		no changes made in the current file.
+6.14		- Add "Reverse" Edit menu option to reverse the characters in the 
+		highlighted string.
+6.15		- Remove unnecessary (redundant) Alt-v (Paste Primary) in popup 
+		windows' text fields.
+6.17		- Fix not using current-working directory when $ENV{HOME} not set bug.
+		- Make sure we have Tk::Notebook installed when using -tabs.
+6.18		- Clean up menu-code a bit.
+		- Recognize Xresource and Xdefaults files as "Xresources" for syntax 
+		highlighting (Kate) even though they lack extensions.
+6.19		- Fix off-by-one character conversion of selected text when changing 
+		case with the Upper-case and Lower-case Edit menu functions.
+		- Add Chr2Hex and Hex2Chr Edit menu functions.
+6.20		- Add a Regex-search option to Searches in order to search for escaped 
+		regex strings in Perl code.
+		- Combine and clean up some of the Edit menu conversion functions.
+6.21		- Add Time option to Edit menu for highlighting Perl Time values and 
+		displaying the time value in human-readable format.
+6.22		- Settle on how Alt-Tab binding/focus should work and fix up.
+6.23		- Fix off-by-one character in Search function if search string 
+		ends in a newline character.  This primarily enables deleting entire 
+		lines that contain the search string (specified as a regular exp.)
+6.25		- Add "Unescape u00##" Edit menu function for converting "\u00##" 
+		- low-order ASCII characters to their 8-bit ASCII character equivalent.
+		- Try harder to detect if changes have actually been made to a file 
+		before popping up a dialog asking user if he's sure he wants to save 
+		changes before exiting.
+6.26		- Dont treat a search string containing only spacing characters (that 
+		match "\s" in Perl as an empty search string, ie. case where one 
+		wishes to match say a tab key ("\t" and change it to say 8 spaces.
+6.27		- Fix failure (by Perl/Tk?) to tell the window-manager to treat popup 
+		dialog boxes as "transient" (ie. to ensure they stay on top of the 
+		main window when main window is focused / raised.
+6.28		- Make Themes menu popup to right of menubar to avoid covering it, 
+		since it's user-editable, and mine, at least, contains enough theme 
+		entries to make it nearly span the screen vertically.
+		- Pack the buttons and menubuttons on the menubar slightly thinner 
+		(to save screen realestate) and more consistant in appearance. 
+		(Perl/Tk seems to require slightly different padding for standalone 
+		buttons vs the "menubuttons" that invoke dropdown menus and the top 
+		menubar contains a mixture of both.
+6.29		- Properly convert filenames beginning with "~/" to $ENV{HOME}/".
+		- Also make our setPalette.pl function optional (failed to start 
+		without it).
+6.31		- Treat clipboard containing only "space" characters (that match "\s" 
+		in Perl) as if clipboard was empty when starting up.
+		- Theme the Notebook (tabs) widget more like GTK-3ish tab widgets for 
+		a prettier (imho) and more consistant desktop appearance with other 
+		apps.  To retain the "classic" Perl/Tk-ish" look, set "classictabs=1" 
+		on command-line or in .ini file(s).
+6.32		- Fix failure to show "--SELECTED TEXT--" in the title-bar if opening 
+		with text in the clipboard (where normally the filename of the file 
+		opened).  Previously was just showing "".
