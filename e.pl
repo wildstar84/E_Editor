@@ -343,7 +343,7 @@ use Tk::JFileDialog;
 
 #-----------------------
 
-$vsn = '6.32';
+$vsn = '6.34';
 
 $editmode = 'Edit';
 if ($v)
@@ -1054,12 +1054,24 @@ $statusLabel->pack(-side => 'bottom',
 		-padx	=> 2,
 		-pady	=> 1);
 
-$openButton = $mFrame->Button(
-		-text => 'Open',
-		-underline =>0,
-		@btnOps,
-		-command => \&openFn);
-$openButton->pack(@btnPackOps);
+if ($nobrowsetabs)
+{
+	$openButton = $mFrame->Button(
+			-text => 'Open',
+			-underline =>0,
+			@btnOps,
+			-command => \&openFn);
+	$openButton->pack(@btnPackOps);
+}
+else
+{
+	$openButton = $mFrame->Button(
+			-text => 'Open+',
+			-underline =>0,
+			@btnOps,
+			-command => \&openTabFn);
+	$openButton->pack(@btnPackOps);
+}
 $findButton = $mFrame->Button(
 		-text => 'Find',
 		-underline => 2,
@@ -1216,6 +1228,8 @@ if (!defined($tabs) && $ARGV[0])
 	$ARGV[0] =~ s/^file://o;  #HANDLE KFM DRAG&DROP!
 	$ARGV[0] =~ s#\\#/#go  if ($bummer);    #FIX Windoze FILENAMES!
 
+	#HANDLE FILENAMES W/ :line# APPENDED (STRIP & GOTO THAT POSN IN FILE):
+	my $posn = (!(-e $ARGV[0]) && $ARGV[0] =~ s/([^\\])\:([\d\.]+)$/$1/) ? $2 : $l;
 	$activeWindow = 0;
 	if (&fetchdata($ARGV[0]))
 	{
@@ -1258,9 +1272,10 @@ if (!defined($tabs) && $ARGV[0])
 		(my $filePart = $cmdfile{''}[0]) =~ s#^.*\/([^\/]+)$#$1#;
 		$tabbedFrame->pageconfigure($activeTab, -label => $filePart)  unless ($nobrowsetabs);
 #		$activeWindow = 1;
-		&gotoMark($textScrolled[$activeWindow], (defined($l) ? $l : '_Bookmark'), 'append');
+		&gotoMark($textScrolled[$activeWindow], (defined($posn) ? $posn : '_Bookmark'), 'append');
 		if ($ARGV[1])   #IF 2ND FILE SPECIFIED, SPLIT SCREEN & OPEN IN BOTTOM.
 		{
+			my $posn = (!(-e $ARGV[1]) && $ARGV[1] =~ s/([^\\])\:([\d\.]+)$/$1/) ? $2 : $l;
 			$cmdfile{''}[1] = $ARGV[1];
 			&splitScreen();
 			$textScrolled[1]->focus();
@@ -1304,7 +1319,7 @@ if (!defined($tabs) && $ARGV[0])
 					}
 					close T;
 				}
-				&gotoMark($textScrolled[$activeWindow], (defined($l) ? $l : '_Bookmark'), 'append');
+				&gotoMark($textScrolled[$activeWindow], (defined($posn) ? $posn : '_Bookmark'), 'append');
 			}
 		}
 	}
@@ -1566,6 +1581,10 @@ sub openTabFn
 			&newTabFn();
 			&openFn(shift @files2open);
 		}
+	}
+	else
+	{
+		&newTabFn(1);  #Open new tab & ASK for fid to open.
 	}
 }
 
@@ -2043,7 +2062,15 @@ sub openFn		#File.Open (Open a different command file)
 				$openfid = $cdir . '/' . $openfid;
 			}
 		}
-		$cmdfile{$activeTab}[$activeWindow] = $openfid  if ($openfid);
+
+		my $posn;
+		if ($openfid) {
+		#HANDLE FILENAMES W/ :line# APPENDED (STRIP & GOTO THAT POSN IN FILE):
+			$posn = (!(-e $openfid) && $openfid =~ s/([^\\])\:([\d\.]+)$/$1/) ? $2 : undef; #DON'T FALLBACK TO $l HERE!
+			$cmdfile{$activeTab}[$activeWindow] = $openfid;
+		} else {
+			$posn = (!(-e $cmdfile{$activeTab}[$activeWindow]) && $cmdfile{$activeTab}[$activeWindow] =~ s/([^\\])\:([\d\.]+)$/$1/) ? $2 : undef; #DON'T FALLBACK TO $l HERE!
+		}
 		&clearMarks();
 		if (&fetchdata($cmdfile{$activeTab}[$activeWindow]))
 		{
@@ -2054,7 +2081,7 @@ sub openFn		#File.Open (Open a different command file)
 				$tabbedFrame->pageconfigure($activeTab, -label => $filePart)  unless ($nobrowsetabs);
 			}
 #			&gotoMark($textScrolled[$activeWindow], (defined($l) ? $l : '_Bookmark'), 'append');
-			&gotoMark($textScrolled[$activeWindow], '_Bookmark', 'append');
+			&gotoMark($textScrolled[$activeWindow], (defined($posn) ? $posn : '_Bookmark'), 'append');
 		}
 		else
 		{

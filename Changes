@@ -194,3 +194,9 @@ Changes:
 6.32		- Fix failure to show "--SELECTED TEXT--" in the title-bar if opening 
 		with text in the clipboard (where normally the filename of the file 
 		opened).  Previously was just showing "".
+6.33		- not released
+6.34		- Make "Open" ribbon button (now "Open+") open in new tab (if using 
+		tabs.  This makes it easy to select/highlight a file and press a 
+		single button without having to go into the File menu.
+		- Allow a position (line#[.col#] to be appended (preceeded by a colon) 
+		to a file-name to cause the file to be opened prepositioned there.
