@@ -200,3 +200,7 @@ Changes:
 		single button without having to go into the File menu.
 		- Allow a position (line#[.col#] to be appended (preceeded by a colon) 
 		to a file-name to cause the file to be opened prepositioned there.
+6.35		- Add new [+Tab] button for opening a file in a new tab (was [Open+], 
+		but that button renamed to [Open] and restored to it's originial 
+		function.
+		- Remove [Exit] ([Save]+[Quit]) button to reduce clutter (redundant).

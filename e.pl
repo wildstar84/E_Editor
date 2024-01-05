@@ -343,7 +343,7 @@ use Tk::JFileDialog;
 
 #-----------------------
 
-$vsn = '6.34';
+$vsn = '6.35';
 
 $editmode = 'Edit';
 if ($v)
@@ -1054,24 +1054,13 @@ $statusLabel->pack(-side => 'bottom',
 		-padx	=> 2,
 		-pady	=> 1);
 
-if ($nobrowsetabs)
-{
-	$openButton = $mFrame->Button(
-			-text => 'Open',
-			-underline =>0,
-			@btnOps,
-			-command => \&openFn);
-	$openButton->pack(@btnPackOps);
-}
-else
-{
-	$openButton = $mFrame->Button(
-			-text => 'Open+',
-			-underline =>0,
-			@btnOps,
-			-command => \&openTabFn);
-	$openButton->pack(@btnPackOps);
-}
+$openButton = $mFrame->Button(
+		-text => 'Open',
+		-underline =>0,
+		@btnOps,
+		-command => \&openFn);
+$openButton->pack(@btnPackOps);
+
 $findButton = $mFrame->Button(
 		-text => 'Find',
 		-underline => 2,
@@ -1121,6 +1110,16 @@ $markButton = $mFrame->Button(
 		-command => [\&addMark]);
 $markButton->pack(@btnPackOps);
 
+unless ($nobrowsetabs)
+{
+	$openButton = $mFrame->Button(
+			-text => '+Tab',
+			-underline => 2,
+			@btnOps,
+			-command => \&openTabFn);
+	$openButton->pack(@btnPackOps);
+}
+
 $opsys = ($bummer) ? 'DOS' : 'Unix';
 $opsysList{''}[0] = $opsys;
 $opsysList{''}[1] = $opsys;
@@ -1148,18 +1147,18 @@ $saveButton = $mFrame->Button(
 $saveButton->pack(@btnPackOps);
 
 $exitButton = $mFrame->Button(
-		-text => 'Quit',
-		-underline => 0,
-		@btnOps,
-		-command => [\&exitFn]);
+ 		-text => 'Quit',
+ 		-underline => 0,
+ 		@btnOps,
+ 		-command => [\&exitFn]);
 $exitButton->pack(@btnPackOps);
 
-$savexButton = $mFrame->Button(
-		-text => 'Exit',
-		-underline => 1,
-		@btnOps,
-		-command => [\&savexFn]);
-$savexButton->pack(@btnPackOps);
+#t $savexButton = $mFrame->Button(
+#t 		-text => 'Exit',
+#t 		-underline => 1,
+#t 		@btnOps,
+#t 		-command => [\&savexFn]);
+#t $savexButton->pack(@btnPackOps);
 
 $bottomFrame->pack(
 		-side => 'bottom',
@@ -1391,7 +1390,7 @@ if ($v)
 	$cutButton->configure(-state => 'disabled');
 	$pasteButton->configure(-state => 'disabled');
 	$saveButton->configure(-state => 'disabled');
-	$savexButton->configure(-state => 'disabled');
+#t	$savexButton->configure(-state => 'disabled');
 	$MainWin->bind('<Escape>' => \&exitFn);
 	#$MainWin->bind('<Alt-c>' => 'NoOp');
 	#$MainWin->bind('<Alt-c>' => sub {&doCopy; shift->break;});  #NEEDED SINCE COLORS REBINDS 
@@ -1935,7 +1934,7 @@ if ($bummer && $w32dnd)
 		});
 		$textScrolled[$i]->bind('<Alt-comma>' => sub { &doSearch(0,0) });
 		$textScrolled[$i]->bind('<Alt-period>' => sub { &doSearch(0,1) });
-		$textScrolled[$i]->bind('<Alt-a>' => sub { &doSearch(0) });
+#t		$textScrolled[$i]->bind('<Alt-a>' => sub { &doSearch(0) });
 		$textScrolled[$i]->bind('<Control-g>' => sub { &doSearch(0,1) });
 		my $cls = ref($textScrolled[$i]->Subwidget($textsubwidget));
  		$textScrolled[$i]->Subwidget($textsubwidget)->bind($cls, '<Control-Key-'.scalar(@tablist).'>' => sub{})
@@ -3549,10 +3548,10 @@ sub doSaveXXXX
 	}
 }
 
-sub savexFn
-{
-	&exitFn($Yes);
-}
+#t sub savexFn
+#t {
+#t 	&exitFn($Yes);
+#t }
 
 sub clearMarks
 {
