@@ -5402,11 +5402,11 @@ E Editor - Perl/Tk text text-editor featuring code highlighting, multiple-tabs, 
 
 Jim Turner
 
-(c) 1999-2023, Jim Turner, under the same license that Perl 5 itself is.  All rights reserved.
+(c) 1999-2024, Jim Turner, under the same license that Perl 5 itself is.  All rights reserved.
 
 =head1 LICENSE AND COPYRIGHT
 
-Copyright (c) 1999-2023 Jim Turner.
+Copyright (c) 1999-2024 Jim Turner.
 
 E Editor is free software; you can redistribute it and/or
 modify it under the terms of the GNU Lesser General Public
