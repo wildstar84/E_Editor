@@ -75,7 +75,7 @@ use Tk::Checkbutton;
 use Tk::Radiobutton;
 use Tk::ColorEditor;  #ADDED 20010131.
 use Tk::Adjuster;
-use Text::Tabs;
+#x use Text::Tabs;
 use Cwd;
 
 our $haveTime2fmtstr = 0;
@@ -89,7 +89,8 @@ eval 'use File::Glob; 1';
 #use Tk::Canvas;
 #use Tk::Scale;
 #xuse Tk::JOptionmenu;
-$haveXML = 0; $haveTextHighlight = 0; $Ansicolor = 0; $SuperText = 0; $havePerlCool = 0;
+$haveXML = 0; $haveTextHighlight = 0; $AnsiColor = 0; $SuperText = 0; 
+$ROSuperText = 0; $ROTextHighlight = 0; $havePerlCool = 0; $WheelMouse = 0;
 $haveHTML = 0; $haveJS = 0; $haveBash = 0; $haveKate = 0; $haveNotebook = 0;
 
 $Steppin = ($ENV{'DESKTOP_SESSION'} =~ /AfterStep/io) ? 1 : 0;
@@ -249,34 +250,46 @@ if ($v)
 	$viewer ||= 'ROTextHighlight'  if ($0 =~ /vc\w*\.(?:exe|pl)$/io);
 #	eval 'use Tk::XMLViewer; $haveXML = 1; 1'  if ($xml);
 	eval 'use Tk::XMLViewer; $haveXML = 1; 1'  unless ($0 =~ /vc\w*\.(?:exe|pl)$/io);
-	eval 'use Tk::Text::ROSuperText; $SuperText = 1; $AnsiColor = 1; 1';
-	eval 'use Tk::ROTextANSIColor; $AnsiColor = 1; 1'  unless ($SuperText || $viewer =~ /texthighlight/i);
-	if ($viewer eq 'ROTextHighlight')
+	eval 'use Tk::ROTextANSIColor; $AnsiColor = 1; 1'  unless ($noac);
+	if ($viewer =~ /TextHighlight/)
 	{
-		eval 'use Tk::TextHighlight::Perl; use Tk::ROTextHighlight; $haveTextHighlight = 1; 1';
+		eval 'use Tk::ROTextHighlight; $haveTextHighlight = 1; $ROTextHighlight = 1; 1';
+		eval 'use Tk::TextHighlight; $haveTextHighlight = 1; 1'  unless ($ROTextHighlight);
+		eval 'use Tk::TextHighlight::Perl; 1';
 		eval 'use Tk::TextHighlight::PerlCool; $havePerlCool = 1; 1';
 		eval 'use Syntax::Highlight::Engine::Kate; $haveKate = 1; 1';
 		$SuperText = 0;   #JWT:ADDED 20150606 TO PREVENT BINDWHEELMOUSE WHEN NOT RUNNING SUPERTEXT!
+		my $checkSuperText = 0;
+		eval 'use Tk::Text::SuperText; $checkSuperText = 1; 1';
+		$AnsiColor = $checkSuperText;  #TextHighlight can be using SuperText OR TextUndo!
 	}
 	elsif ($viewer)
 	{
-		eval "use Tk::$viewer; 1";
-		if ($viewer =~ /SuperText/o)
-		{
-			$SuperText = 1;
+		if ($viewer =~ /SuperText/o) {
 			$viewer = '';
+		} else {
+			eval "use Tk::$viewer; 1";
 		}
+	}
+	unless ($viewer)
+	{
+		eval 'use Tk::Text::ROSuperText; $SuperText = 1; $ROSuperText = 1; 1';
+		eval 'use Tk::Text::SuperText; $SuperText = 1; 1'  unless ($ROSuperText);
 	}
 #print DEBUG "-???- viewer=$viewer= st=$SuperText= ac=$AnsiColor=\n"  if ($debug);
 }
 else
 {
 	$editor ||= 'TextHighlight'  if ($0 =~ /[ev]c\w*\.(?:exe|pl)$/io);
+	eval 'use Tk::TextANSIColor; $AnsiColor = 1; 1'  unless ($noac);
 	if ($editor eq 'TextHighlight')
 	{
 		eval 'use Tk::TextHighlight; $haveTextHighlight = 1; 1';
 		eval 'use Tk::TextHighlight::PerlCool; $havePerlCool = 1; 1';
 		eval 'use Syntax::Highlight::Engine::Kate; $haveKate = 1; 1';
+		my $checkSuperText = 0;
+		eval 'use Tk::Text::SuperText; $checkSuperText = 1; 1';
+		$AnsiColor = $checkSuperText;  #TextHighlight can be using SuperText OR TextUndo!
 	}
 	elsif ($editor)
 	{
@@ -308,42 +321,40 @@ $focustab ||= $nobrowsetabs ? '' : 'Tab1';
 $focustab = 'Tab'.($focustab+1)  if ($focustab =~ /^\d+$/o);
 
 #print DEBUG "-???- codetext=$codetext=\n"  if ($debug);
-if ($haveTextHighlight)
-{
+if ($haveTextHighlight) {
 	my $spacesperTab = $tabspacing || 3;
 	my $tspaces = ' ' x $spacesperTab;
-	if ($v) {
-		%{$extraOptsHash{rotexthighlight}} = (-syntax => ($codetext||$havePerlCool), 
-				-autoindent => 1, 
-				-rulesdir => ($codetextdir||$ENV{'HOME'}),
-				-indentchar => ($notabs ? $tspaces : "\t"),
-				-highlightInBackground => (defined $hib) ? $hib : 1
-		);
-	} else {
-		%{$extraOptsHash{texthighlight}} = (-syntax => ($codetext||$havePerlCool), 
-				-autoindent => 1, 
-				-rulesdir => ($codetextdir||$ENV{'HOME'}),
-				-indentchar => ($notabs ? $tspaces : "\t"),
-				-highlightInBackground => (defined $hib) ? $hib : 1
-		);
-	}
+	%{$extraOptsHash{texthighlight}} = (-syntax => ($codetext||$havePerlCool), 
+			-autoindent => 1, 
+			-rulesdir => ($codetextdir||$ENV{'HOME'}),
+			-indentchar => ($notabs ? $tspaces : "\t"),
+			-highlightInBackground => (defined $hib) ? $hib : 1,
+	);
+	${$extraOptsHash{texthighlight}}{'-syntaxcomments'} = 1  if ($Tk::TextHighlight::VERSION >= 2.0);
+} elsif ($SuperText) {
+	$matchhighlighttime = 3500  unless (defined($matchhighlighttime)
+			&& $matchhighlighttime =~ /^[0-9]$/);
+	%{$extraOptsHash{supertext}} = (
+				-matchhighlighttime => $matchhighlighttime,
+	);
+	%{$extraOptsHash{rosupertext}} = (
+				-matchhighlighttime => $matchhighlighttime,
+	);
 }
 
-#eval 'require "BindMouseWheel.pl"; $WheelMouse = 1; 1';
-if ($SuperText)    #OTHER TEXT WIDGETS DON'T NEED THIS!
-{
-eval
-	{
-		require "BindMouseWheel.pl"; $WheelMouse = 1;
-	};
-}
+#DEPRECIATED!: #SuperText-BASED WIDGETS REQUIRE THIS FOR SCROLLWHEELS!
+eval 'require "BindMouseWheel.pl"; $WheelMouse = 1; 1'
+		if (($SuperText || $haveTextHighlight)
+			&& (defined($Tk::Text::SuperText::VERSION)
+			&& $Tk::Text::SuperText::VERSION lt '1.2'));
+
 #print "-eval returned =$@=  wm=$WheelMouse= package=".__PACKAGE__."=\n";
 
 use Tk::JFileDialog;
 
 #-----------------------
 
-$vsn = '6.35';
+$vsn = '6.43';
 
 $editmode = 'Edit';
 if ($v)
@@ -617,8 +628,8 @@ else
 		}
 	}
 }
-my ($textwidget) = 'TextUndo';
-$textwidget = 'SuperText'  if ($SuperText);
+my ($textwidget) = $v ? 'ROText' : 'TextUndo';
+$textwidget = ($v && $ROSuperText) ? 'ROSuperText' : 'SuperText'  if ($SuperText);
 $textwidget = $editor  if ($editor);
 my $PlusN65pixmap = 0;
 my $MinusN65pixmap = 0;
@@ -631,21 +642,20 @@ if ($v)
 		$PlusN65pixmap = $MainWin->Getimage('plusN65')  if (Tk->findINC('plusN65.gif'));
 		$MinusN65pixmap = $MainWin->Getimage('minusN65')  if (Tk->findINC('minusN65.gif'));
 	}
-	$textwidget = $viewer;
+	$textwidget = $viewer  if ($viewer);
 	unless ($textwidget)
 	{
 		$textwidget = 'ROText';
-		$textwidget = 'ROTextANSIColor'  if ($AnsiColor && !$noac);
-		$textwidget = 'ROSuperText'  if ($SuperText);
+		$textwidget = 'ROTextANSIColor'  if ($AnsiColor);
+		$textwidget = $ROSuperText ? 'ROSuperText' : 'SuperText'  if ($SuperText);
 	}
 	$SuperText = 0  if ($viewer && $viewer !~ /supertext/io);
-	$AnsiColor = 0  unless ($textwidget =~ /^(?:ROSuperText|ROTextANSIColor)$/o);
 }
 else
 {
 	$SuperText = 0  if ($editor && $editor !~ /supertext/io);
-	$AnsiColor = 0  unless ($textwidget =~ /^(?:SuperText|TextANSIColor)$/o);
 }
+$AnsiColor = 0  if ($textwidget =~ /^(?:ROText|Text|TextUndo)$/);
 my ($mytextrelief) = 'sunken';
 $mytextrelief = 'groove'  if ($v);
 $bottomFrame = $MainWin->Frame;
@@ -653,7 +663,7 @@ $bottomFrame = $MainWin->Frame;
 $wrap = 'none'  unless (defined($wrap));
 $tagcnt = 0;
 
-my $newsupertext;
+my $newsupertext;  #TRUE IF EDITING & USING SUPERTEXT THAT INCLUDES ANSICOLOR!
 #my @tabb;
 
 &newTabFn();
@@ -722,6 +732,10 @@ $fileMenubtn->command(
 				&saveFn(3);
 			}
 		});
+$fileMenubtn->command(
+		-label => 'Save w/AnsiColors',
+		-underline => 0,
+		-command => [\&saveFn, 2]);
 $fileMenubtn->command(
 		-label => 'Print',
 		-underline =>0,
@@ -937,7 +951,10 @@ if (open (T, "${cwd}.myethemes") || open (T, "${homedir}.myethemes")
 			-text => 'Tags',
 			@menuOps
 	);
-	$tagMenubtn->configure(-state => 'disabled')  unless ($newsupertext || $AnsiColor); #ADDED 20010131
+	unless ($AnsiColor) { #ADDED 20010131
+		$tagMenubtn->configure(-state => 'disabled');
+		$fileMenubtn->entryconfigure('Save w/AnsiColors', -state => 'disabled');
+	}
 
 	$tagMenubtn->pack(@menuPackOps);
 	$tagMenubtn->command(-label => 'Clear', -underline =>2, -command => [\&setTag,'clear']);
@@ -1187,11 +1204,14 @@ if ($fgOrg)
 			-foreground => $fg);
 }
 
+#DIALOG BUTTONS:
 ($Yes,$No,$Cancel,$Append) = ('~Yes','~No','~Cancel','~Append');
+
+#DIALOG BOXES:
 $yncDialog = $MainWin->JDialog(
 		-title          => 'Unsaved Changes!!',
 		-text           => "Do you wish to save changes?",
-		-bitmap         => 'questhead',
+		-bitmap         => 'question',
 		-default_button => $Yes,
 		-escape_button		=> $Cancel,
 		-buttons        => [$Yes,$No,$Cancel],
@@ -1200,7 +1220,7 @@ $yncDialog = $MainWin->JDialog(
 $saveDialog = $MainWin->JDialog(
 		-title          => 'Unsaved Changes!!',
 		-text           => "Do you wish to save changes?",
-		-bitmap         => 'questhead',
+		-bitmap         => 'question',
 		-default_button => $Yes,
 		-escape_button		=> $Cancel,
 		-buttons        => [$Yes,$No,$Append,$Cancel],
@@ -1209,7 +1229,7 @@ $saveDialog = $MainWin->JDialog(
 $replDialog = $MainWin->JDialog(
 		-title          => 'Search/Replace',
 		-text           => "Replace?",
-		-bitmap         => 'questhead',
+		-bitmap         => 'question',
 		-default_button => $Yes,
 		-escape_button  => $No,
 		-buttons        => [$Yes,$No],
@@ -1217,7 +1237,7 @@ $replDialog = $MainWin->JDialog(
 
 ($OK) = ('~Ok');
 $errDialog = $MainWin->JDialog(
-		-title          => '-ERROR!-',
+		-title          => 'ERROR!',
 		-bitmap         => 'error',
 		-buttons        => [$OK],
 );
@@ -1349,13 +1369,13 @@ elsif (!$n && !$new)
 
 $filetype = 0;
 
-if ($cmdfile{''}[0] =~ /\.c$/io || $cmdfile{''}[0] =~ /\.h$/io || $cmdfile{''}[0] =~ /\.cpp$/io)
+if ($cmdfile{''}[0] =~ /\.c$/io || $cmdfile{''}[0] =~ /\.h$/io || $cmdfile{''}[0] =~ /\.cc$/io || $cmdfile{''}[0] =~ /\.cpp$/io)
 {
 	#eval {require 'e_c.pl';};  #EVAL DOESN'T WORK HERE IN COMPILED VSN.
 	require 'e_c.pl';
 	$filetype = 1;
 }
-elsif ($cmdfile{''}[0] =~ /\..*ht[a-z]+/io)
+elsif ($cmdfile{''}[0] =~ /\.html?$/io)
 {
 	#eval {require 'e_htm.pl';};
 	require 'e_htm.pl';
@@ -1385,7 +1405,9 @@ if ($v)
 	{
 		$editMenubtn->entryconfigure($n, -state => 'disabled');
 	}
+	$fileMenubtn->entryconfigure('New', -state => 'disabled');
 	$fileMenubtn->entryconfigure('Save', -state => 'disabled');
+	$fileMenubtn->entryconfigure('Save w/AnsiColors', -state => 'disabled');
 	$asdosButton->configure(-state => 'disabled');
 	$cutButton->configure(-state => 'disabled');
 	$pasteButton->configure(-state => 'disabled');
@@ -1399,15 +1421,20 @@ if ($v)
 	                                        #DOESN'T WORK :---(((
 }
 
-#NEXT 4 ADDED 20031107 FOR IMWHEEL.
-$MainWin->bind('<Alt-Left>' => sub { 
-		$textScrolled[$activeWindow]->Subwidget($textsubwidget)->xview('scroll', -1, 'units');
+#NEXT 4 ADDED 20031107 FOR IMWHEEL:
+$MainWin->bind('<Alt-Left>' => sub {
+	$textScrolled[$activeWindow]->Subwidget($textsubwidget)->xview('scroll', -1, 'units');
 });
-$MainWin->bind('<Alt-Right>' => sub { 
-		$textScrolled[$activeWindow]->Subwidget($textsubwidget)->xview('scroll', +1, 'units');
+$MainWin->bind('<Alt-Right>' => sub {
+	$textScrolled[$activeWindow]->Subwidget($textsubwidget)->xview('scroll', +1, 'units');
 });
-$MainWin->bind('<Alt-Up>' => sub { $textScrolled[$activeWindow]->Subwidget($textsubwidget)->yview('scroll', -1, 'units') });
-$MainWin->bind('<Alt-Down>' => sub { $textScrolled[$activeWindow]->Subwidget($textsubwidget)->yview('scroll', +1, 'units') });
+$MainWin->bind('<Alt-Up>' => sub {
+	$textScrolled[$activeWindow]->Subwidget($textsubwidget)->yview('scroll', -1, 'units')
+});
+$MainWin->bind('<Alt-Down>' => sub {
+	$textScrolled[$activeWindow]->Subwidget($textsubwidget)->yview('scroll', +1, 'units')
+});
+
 $MainWin->bind('<Alt-less>' => [\&doSearch,0,0]);
 $MainWin->bind('<Alt-greater>' => [\&doSearch,0,1]);
 
@@ -1486,10 +1513,11 @@ $activeWindows{$activeTab} = $activeWindow;
 #DEPRECIATED:&gotoMark($textScrolled[$activeWindow],$l)  if ($l);
 if ($s)
 {
+	my $srchtype = ($s =~ s#\/i$##) ? '-nocase' : '-exact';
 	push (@srchTextChoices, $s);
-	$srchOptChoices{$s} = '-nocase';
+	$srchOptChoices{$s} = $srchtype;
 	$replTextChoices{$s} = '';
-	&doSearch(2);
+	&doSearch(2,1);
 }
 
 #JWT:FOR SOME UNKNOWN REASON, WE HAVE TO ALSO FORCE THESE TO BE TRANSIENT HERE?!:
@@ -1497,6 +1525,73 @@ $yncDialog->transient($MainWin);
 $saveDialog->transient($MainWin);
 $replDialog->transient($MainWin);
 $errDialog->transient($MainWin);
+
+# ADDED THIS HERE LOCALLY B/C ONLY TEXTHIGHLIGHT SUPPORTS IT,
+# BUT IT'S USEFUL ENOUGH TO ME TO INCLUDE IN ALL OF 'EM!
+# NOTE:  ONLY COMPILED HERE IF NOT USING TEXTHIGHLIGHT v2+:
+unless ($haveTextHighlight && $Tk::TextHighlight::VERSION >= 2.0) {
+	my $evalstr = <<'DOAUTOINDENT_FN';
+	sub doAutoIndent {
+		my $cw = shift;
+
+		my $doAutoIndent = shift;
+		if ($v) {
+			my $marginlen = 1;
+			if ($doAutoIndent) {
+				my $margin = $cw->get('insert lineend + 1 char', 'insert lineend + 1 char lineend');
+				$marginlen = length($1) + 1  if ($margin =~ /^(\s+)/);
+			}
+			$cw->SetCursor($cw->index("insert lineend + $marginlen char"));
+			$cw->see('insert linestart');
+			Tk->break;
+			return;
+		}
+
+		my $i = $cw->index('insert linestart');
+#		my $insertStuff = "\n";
+		my $insertStuff = ($textsubwidget =~ /supertext/i) ? "\n" : '';
+		my $s = $cw->get("$i", "$i lineend");
+		&beginUndoBlock;
+		#if ($s =~ /\S/o)  #JWT: UNCOMMENT TO CAUSE SUBSEQUENT BLANK LINES TO NOT BE AUTOINDENTED.
+		#{
+			#$s =~ /^(\s+)/;  #CHGD. TO NEXT 20060701 JWT TO FIX "e" BEING INSERTED INTO LINE WHEN AUTOINDENT ON?!
+			$s =~ /^(\s*)/o;
+			if ($doAutoIndent) {
+				#NOTE:  WE ALWAYS USE -smartindent!:
+				my $thisindent = defined($1) ? $1 : '';
+				my $s2 = '';
+				my $thisindlen = length($thisindent);
+#				my $cc = $cw->cget('-commentchar') || "\x02";  #MUST BE A NON-EMPTY STRING IN NEXT REGEX!:
+				my $cc = '#';  #HARDCODED FOR NOW.
+				eval "\$s2 = \$cw->get('insert + 1 line linestart', 'insert + 1 line lineend')";
+				$s2 =~ /^(\s*)/o;
+				my $nextindent = defined($1) ? $1 : '';
+				my $nextindlen = length($nextindent);
+				my $indentchar = ($notabs ? $tspaces : "\t");
+				if ($s =~ /[\{\[\(]\s*(?:\Q$cc\E.*)?$/o) {  #CURRENT LINE ENDS IN AN OPENING BRACE (INDENT AT LEAST 1 INDENTATION):
+					$insertStuff .= ($nextindlen > $thisindlen) ? $nextindent : "$thisindent$indentchar";
+				} else {  #NORMAL LINE (KEEP SAME INDENT UNLESS NEXT LINE FURTHER INDENTED):
+					my $afterStuff = $cw->get('insert', "$i lineend");
+					$insertStuff .= ($nextindlen < $thisindlen || $s2 =~ /^\s*[\}\]\)]/o) ? $thisindent : $nextindent;
+					if (length $afterStuff) {  #WE HIT <Enter> IN MIDDLE OF A LINE:
+						if ($afterStuff =~ /^\s*[\}\]\)]/o) {  #WE HIT <Enter> ON A CLOSING BRACE:
+							$insertStuff =~ s/$indentchar//;
+						} elsif ($cw->get('insert - 1c') =~ /[\{\[\(]/o) {
+							$insertStuff .= $indentchar;
+						}
+					}
+				}
+			}
+		#}  #JWT: UNCOMMENT TO CAUSE SUBSEQUENT BLANK LINES TO NOT BE AUTOINDENTED.
+		$cw->insert('insert', $insertStuff);
+		&endUndoBlock;
+		$cw->see('insert linestart');
+		Tk->break;
+	}
+DOAUTOINDENT_FN
+
+	eval $evalstr;
+}
 
 #MainLoop;
 while (Tk::MainWindow->Count)
@@ -1541,15 +1636,12 @@ sub newFn
 {
 	my ($usrres);
 	$usrres = $No;
-	unless ($v)
+	if (anyChanges($activeTab, $activeWindow))
 	{
-		if (anyChanges($activeTab, $activeWindow))
-		{
-			$yncDialog->configure(
-					-text => "Save any changes to $cmdfile{$activeTab}[$activeWindow]?");
-			$usrres = $yncDialog->Show();		
-			$cmdfile{$activeTab}[$activeWindow] ||= "$hometmp/e.out.tmp";
-		}
+		$yncDialog->configure(
+				-text => "Save any changes to $cmdfile{$activeTab}[$activeWindow]?");
+		$usrres = $yncDialog->Show();		
+		$cmdfile{$activeTab}[$activeWindow] ||= "$hometmp/e.out.tmp";
 	}
 	$_ = '';
 	$usrres = $Cancel x &writedata($cmdfile{$activeTab}[$activeWindow], 1)  if ($usrres eq $Yes);
@@ -1651,11 +1743,13 @@ sub newTabFn
 		$text1Frame = $tabbedFrame->add( $activeTab, -label=> "Tab $nextTab", -raisecmd => [\&chgTabs, $nextTab]);
 		++$nextTab;
 	}
+	my $useAnsiColor = ($AnsiColor && ($textwidget =~ /(?:TextHighlight|SuperText)/) && !$noac) ? 1 : 0;
+	my %ansiColorFlags = $useAnsiColor ? ('-ansicolor' => $useAnsiColor) : ();
 	if ($SuperText && !$noac && !$v)
 	{
 		$textsubwidget = $SuperText ? 'supertext' : 'textundo';
 		$textScrolled[0] = $text1Frame->Scrolled($textwidget,
-				-scrollbars => 'se', -ansicolor => 1);
+				-scrollbars => 'se', %ansiColorFlags);
 		$textScrolled[0]->Subwidget('xscrollbar')->configure(-takefocus => 0);
 		$textScrolled[0]->Subwidget('yscrollbar')->configure(-takefocus => 0);
 		$textScrolled[0]->Subwidget('corner')->Button(
@@ -1666,7 +1760,7 @@ sub newTabFn
 		)->pack(-side => 'top', -padx => 0, -pady => 0, -anchor => 'se');
 		$textAdjuster = $text1Frame->Adjuster();
 		$textScrolled[1] = $text1Frame->Scrolled($textwidget,
-				-scrollbars => 'se', -ansicolor => 1);
+				-scrollbars => 'se', %ansiColorFlags);
 		$textScrolled[1]->Subwidget('xscrollbar')->configure(-takefocus => 0);
 		$textScrolled[1]->Subwidget('yscrollbar')->configure(-takefocus => 0);
 		$newsupertext = 1;
@@ -1677,11 +1771,24 @@ sub newTabFn
 			-command => [\&jump2top, 1],
 		)->pack(-side => 'top', -padx => 0, -pady => 0, -anchor => 'se');
 	}
+	my $legacyRO = 0;
 	unless ($newsupertext)
 	{
 		($textsubwidget = $textwidget) =~ tr/A-Z/a-z/;
-		$textScrolled[0] = $text1Frame->Scrolled($textwidget,
-				-scrollbars => 'se');
+		$textwidget = 'SuperText'  if ($textwidget eq 'ROSuperText');
+		$textwidget = 'TextHighlight'  if ($textwidget eq 'ROTextHighlight');
+		eval "\$textScrolled[0] = \$text1Frame->Scrolled(\$textwidget,
+				-scrollbars => 'se', %ansiColorFlags);";
+		if ($@) {
+			$textwidget = 'ROSuperText'  if ($ROSuperText);
+			$textScrolled[0] = $text1Frame->Scrolled($textwidget,
+				-scrollbars => 'se', %ansiColorFlags);
+			$legacyRO = 1;
+		}
+		$textScrolled[0]->configure('-readonly' => 1)
+				if ($v && (($textwidget =~ /\bSuperText/ && !$ROSuperText)
+						|| ($textwidget =~ /\bTextHighlight/ && !$ROTextHighlight)
+					&& $Tk::TextHighlight::VERSION >= 2.0));
 		$textScrolled[0]->Subwidget('xscrollbar')->configure(-takefocus => 0);
 		$textScrolled[0]->Subwidget('yscrollbar')->configure(-takefocus => 0);
 		$textScrolled[0]->Subwidget('corner')->Button(
@@ -1692,7 +1799,11 @@ sub newTabFn
 		)->pack(-side => 'top', -padx => 0, -pady => 0, -anchor => 'se');
 		$textAdjuster = $text1Frame->Adjuster();
 		$textScrolled[1] = $text1Frame->Scrolled($textwidget,
-				-scrollbars => 'se');
+				-scrollbars => 'se', %ansiColorFlags);
+		$textScrolled[1]->configure('-readonly' => 1)
+				if ($v && (($textwidget =~ /\bSuperText/ && !$ROSuperText)
+						|| ($textwidget =~ /\bTextHighlight/ && !$ROTextHighlight)
+					&& $Tk::TextHighlight::VERSION >= 2.0));
 		$textScrolled[1]->Subwidget('xscrollbar')->configure(-takefocus => 0);
 		$textScrolled[1]->Subwidget('yscrollbar')->configure(-takefocus => 0);
 		$textScrolled[1]->Subwidget('corner')->Button(
@@ -1702,9 +1813,9 @@ sub newTabFn
 			-command => [\&jump2top, 1],
 		)->pack(-side => 'top', -padx => 0, -pady => 0, -anchor => 'se');
 	}
+print DEBUG "-tsw=$textsubwidget= tw=$textwidget= active=$activeTab= SAVE-ON-DESTROY SET!\n"  if ($debug);
 	unless ($v || $nosod)
 	{
-print DEBUG "-tsw=$textsubwidget= tw=$textwidget= active=$activeTab= SAVE-ON-DESTROY SET!\n"  if ($debug);
 		$textScrolled[0]->Subwidget($textsubwidget)->OnDestroy([\&SaveOnDestroy, 'X', 0, 0, $activeTab, $textScrolled[0]]);
 		$textScrolled[1]->Subwidget($textsubwidget)->OnDestroy([\&SaveOnDestroy, 'X', 0, 1, $activeTab, $textScrolled[1]]);
 	}
@@ -1715,14 +1826,21 @@ print DEBUG "-tsw=$textsubwidget= tw=$textwidget= active=$activeTab= SAVE-ON-DES
 	$scrnCnts{$activeTab} = $scrnCnt;
 #print DEBUG "---new tab:  active=$activeTab= scr0=$textScrolled[0]= wheelmouse=$WheelMouse=\n"  if ($debug);
 	Tk::Autoscroll::Init($textScrolled[0])  if ($autoScroll);
-	&BindMouseWheel($textScrolled[0])  if ($WheelMouse);
-	&BindMouseWheel($textScrolled[1])  if ($WheelMouse);
+	if ($WheelMouse) {
+		eval "&BindMouseWheel(\$textScrolled[0])";
+		eval "&BindMouseWheel(\$textScrolled[1])";
+	}
 
 	if ($v)
 	{
 		$textsubwidget = ($AnsiColor && !$noac) ? 'rotextansicolor' : 'rotext';
-		$textsubwidget = 'rosupertext'  if $SuperText;
-		$textsubwidget = "\L$viewer\E"  if ($viewer);
+		if ($SuperText) {
+			$textsubwidget = $legacyRO ? 'rosupertext' : 'supertext';
+		} elsif ($viewer =~ /TextHighlight/) {
+			$textsubwidget = $legacyRO ? 'rotexthighlight' : 'texthighlight';
+		} else {
+			$textsubwidget = $viewer ? "\L$viewer\E" : 'rotext';
+		}
 #print DEBUG "-subwidget=$textsubwidget= viewer=$viewer= ST=$SuperText=\n"  if ($debug);
 		$text1Text = $textScrolled[0]->Subwidget($textsubwidget);
 		print DEBUG "--configured -font := ($fixedfont)\n"  if ($debug);
@@ -1731,7 +1849,6 @@ print DEBUG "-tsw=$textsubwidget= tw=$textwidget= active=$activeTab= SAVE-ON-DES
 				-font	=> $fixedfont,
 			#-font	=> '-*-lucida console-medium-r-normal-*-18-*-*-*-*-*-*-*',
 				-tabs	=> ['1.35c','2.7c','4.05c'],
-				-insertbackground => 'white',
 				-relief => $mytextrelief,
 				-wrap	=> $wrap,
 				-height => $height,
@@ -1741,7 +1858,6 @@ print DEBUG "-tsw=$textsubwidget= tw=$textwidget= active=$activeTab= SAVE-ON-DES
 				-font	=> $fixedfont,
 			#-font	=> '-*-lucida console-medium-r-normal-*-18-*-*-*-*-*-*-*',
 				-tabs	=> ['1.35c','2.7c','4.05c'],
-				-insertbackground => 'white',
 				-relief => $mytextrelief,
 				-wrap	=> $wrap,
 				-height => $height,
@@ -1756,7 +1872,7 @@ print DEBUG "-tsw=$textsubwidget= tw=$textwidget= active=$activeTab= SAVE-ON-DES
 			my $max = $red+1.5*$green+0.5*$blue;
 			if ($max <= $TwilightThreshold)
 			{
-print "--SETTING TO NIGHT IMAGES!\n"  if ($debug);
+				print "--SETTING TO NIGHT IMAGES!\n"  if ($debug);
 				$textScrolled[0]->Subwidget($textsubwidget)->{PlusImage} = $PlusN65pixmap  if ($PlusN65pixmap);
 				$textScrolled[0]->Subwidget($textsubwidget)->{MinusImage} = $MinusN65pixmap  if ($MinusN65pixmap);
 				$textScrolled[1]->Subwidget($textsubwidget)->{PlusImage} = $PlusN65pixmap  if ($PlusN65pixmap);
@@ -1776,6 +1892,7 @@ print "--SETTING TO NIGHT IMAGES!\n"  if ($debug);
 	{
 		$textsubwidget = $SuperText ? 'supertext' : 'textundo';
 		$textsubwidget = "\L$editor\E"  if ($editor);
+		$textsubwidget = 'textansicolor'  if ($AnsiColor && $textsubwidget eq 'text');
 		print DEBUG "-subwidget=$textsubwidget= viewer=$viewer= ST=$SuperText=\n"  if ($debug);
 		$text1Text = $textScrolled[0]->Subwidget($textsubwidget);
 		print DEBUG "--configured -font := ($fixedfont)\n"  if ($debug);
@@ -1783,7 +1900,6 @@ print "--SETTING TO NIGHT IMAGES!\n"  if ($debug);
 				-setgrid=> 1,
 				-font	=> $fixedfont,
 				-tabs	=> ['1.35c','2.7c','4.05c'],
-				-insertbackground => 'white',
 				-relief => $mytextrelief,
 				-wrap	=> $wrap,
 				-height => $height,
@@ -1792,7 +1908,6 @@ print "--SETTING TO NIGHT IMAGES!\n"  if ($debug);
 				-setgrid=> 1,
 				-font	=> $fixedfont,
 				-tabs	=> ['1.35c','2.7c','4.05c'],
-				-insertbackground => 'white',
 				-relief => $mytextrelief,
 				-wrap	=> $wrap,
 				-height => $height,
@@ -1901,31 +2016,28 @@ if ($bummer && $w32dnd)
 #		$textScrolled[$i]->Subwidget($textsubwidget)->bind('<F12>' => [\&doFnKey,12]);
 #		$textScrolled[$i]->Subwidget($textsubwidget)->bindtags(\@bindTags);  #REVERSE BIND ORDER PROCESSING.
 #		$textScrolled[$i]->Subwidget($textsubwidget)->bind('<Return>', sub { shift->doAutoIndent(1); })  #TRIED TO FIX AUTOINDENT, CAN'T HAVE BOTH F3 & AUTOINDENT WORK?!?!?!
+#		ADDED THIS HERE LOCALLY B/C ONLY TEXTHIGHLIGHT SUPPORTS IT,
+#		BUT IT'S USEFUL ENOUGH TO ME TO INCLUDE IN ALL OF 'EM!:
+#		NOTE:  ONLY COMPILED HERE IF NOT USING TEXTHIGHLIGHT v2+:
+		unless ($haveTextHighlight && $Tk::TextHighlight::VERSION >= 2.0) {
+			$textScrolled[$i]->Subwidget($textsubwidget)->bind('<Return>', [
+					\&doAutoIndent,1 
+			]);
+			$textScrolled[$i]->Subwidget($textsubwidget)->bind('<Shift-Return>', [
+					\&doAutoIndent,0 
+			]);
+		}
 	}
 
-	if ($SuperText == 1 || $editor =~ /texthighlight/io)
-	{
-		$textScrolled[0]->bind('<Control-p>' => sub
-		{
-				$textScrolled[0]->Subwidget($textsubwidget)->markSet('_prev','insert');
-				$textScrolled[0]->Subwidget($textsubwidget)->jumpToMatchingChar();
-				&shocoords(0);
-		});
-		$textScrolled[1]->bind('<Control-p>' => sub
-		{
-				$textScrolled[1]->Subwidget($textsubwidget)->markSet('_prev','insert');
-				$textScrolled[1]->Subwidget($textsubwidget)->jumpToMatchingChar();
-				&shocoords(0);
-		});
-	}
 	$opsys = ($bummer) ? 'DOS' : 'Unix';
 	my @tablist = $tabbedFrame->pages()  unless ($nobrowsetabs);
 	for (my $i=0;$i<=1;$i++)
 	{
 		$opsysList{$activeTab}[$i] = $opsys;
+		my $tw = $textScrolled[$i]->Subwidget($textsubwidget);
 
-#		$textScrolled[$i]->Subwidget($textsubwidget)->bind('<ButtonRelease-1>' => [\&shocoords,1]);
-		$textScrolled[$i]->Subwidget($textsubwidget)->bind('<ButtonRelease-1>' => sub {
+#		$tw->bind('<ButtonRelease-1>' => [\&shocoords,1]);
+		$tw->bind('<ButtonRelease-1>' => sub {
 			&shocoords(1);
 			if ($editor =~ /TextHighlight/o || $viewer =~ /TextHighlight/o)
 			{
@@ -1936,10 +2048,172 @@ if ($bummer && $w32dnd)
 		$textScrolled[$i]->bind('<Alt-period>' => sub { &doSearch(0,1) });
 #t		$textScrolled[$i]->bind('<Alt-a>' => sub { &doSearch(0) });
 		$textScrolled[$i]->bind('<Control-g>' => sub { &doSearch(0,1) });
-		my $cls = ref($textScrolled[$i]->Subwidget($textsubwidget));
- 		$textScrolled[$i]->Subwidget($textsubwidget)->bind($cls, '<Control-Key-'.scalar(@tablist).'>' => sub{})
+		my $cls = ref($tw);
+ 		$tw->bind($cls, '<Control-Key-'.scalar(@tablist).'>' => sub{})
  			if (!$nobrowsetabs && scalar(@tablist) <= 9);
-		$textScrolled[$i]->Subwidget($textsubwidget)->bind($cls, '<Alt-Tab>' => sub{});
+		$tw->bind($cls, '<Alt-Tab>' => sub{});  #NOTE: '' DOESN'T WORK HERE? SO USE sub{}!
+
+		#JWT:FIX SOME INCONSISTANT Tk BINDINGS TO WORK LIKE SuperText!:
+		#(Tk'S MOVE LEFT TO AND SELECT TO PREVIOUS "WORD" AREN'T CONSISTANT WITH THE RIGHT-HANDED VERSIONS), SO WE OVERRIDE:
+
+		foreach my $seq (qw(Left Right Up Down Control-Left Shift-Left 
+				Shift-Control-Left Alt-Left Control-Right Shift-Right 
+				Shift-Control-Right Alt-Right Control-Up Shift-Up 
+				Shift-Control-Up Alt-Up Control-Down Shift-Down 
+				Shift-Control-Down Alt-Down))
+		{
+			$tw->bind($cls, "<$seq>" => '');  #CLEAR OUTSIDE BINDINGS!
+		}
+		$tw->bind($cls, '<Alt-ButtonPress-1>' => sub{});
+		$tw->bind('<Left>', sub {  #moveLeft():
+			my $w = shift;
+			$w->SetCursor($w->index('insert - 1c'));
+			Tk->break;
+		});
+		$tw->bind('<Right>', sub {  #moveRight():
+			my $w = shift;
+			$w->SetCursor($w->index('insert + 1c'));
+			Tk->break;
+		});
+		$tw->bind('<Up>', sub {  #moveUp():
+			my $w = shift;
+			$w->SetCursor($w->UpDownLine(-1));
+			Tk->break;
+		});
+		$tw->bind('<Down>', sub {  #moveDown():
+			my $w = shift;
+			$w->SetCursor($w->UpDownLine(1));
+			Tk->break;
+		});
+		$tw->bind('<Control-Left>', sub {  #moveLeftWord():
+			my $w = shift;
+			#JWT:REPLACED WITH NEXT 2 TO MAKE WORK CONSISTANTLY WITH moveRightWord!:	$w->SetCursor($w->index('insert - 1c wordstart'));
+			$w->markSet('__marker__', $w->index('insert wordstart - 1c'));
+			$w->SetCursor($w->index("__marker__ - 1c wordstart"));
+			Tk->break;
+		});
+		$tw->bind('<Shift-Left>', sub {  #selectLeft():
+			my $w = shift;
+			$w->KeySelect($w->index('insert - 1c'));
+			Tk->break;
+		});
+		$tw->bind('<Shift-Control-Left>', sub {  #selectLeftWord():
+			my $w = shift;
+			$w->KeySelect($w->index('insert - 1c wordstart'));
+			Tk->break;
+		});
+		$tw->bind('<Control-Right>', sub {  #moveRightWord():
+			my $w = shift;
+			$w->SetCursor($w->index('insert + 1c wordend'));
+			Tk->break;
+		});
+		$tw->bind('<Shift-Right>', sub {  #selectRight():
+			my $w = shift;
+			$w->KeySelect($w->index('insert + 1c'));
+			Tk->break;
+		});
+		$tw->bind('<Shift-Control-Right>', sub {  #selectRightWord():
+			my $w = shift;
+			$w->KeySelect($w->index('insert wordend'));
+			Tk->break;
+		});
+		$tw->bind('<Shift-Up>', sub {  #selectUp():
+			my $w = shift;
+			$w->KeySelect($w->UpDownLine(-1));
+			Tk->break;
+		});
+		$tw->bind('<Shift-Down>', sub {  #selectDown():
+			my $w = shift;
+			$w->KeySelect($w->UpDownLine(1));
+			Tk->break;
+		});
+
+		#JWT:ALLOW USER TO MOVE CURSOR WITHOUT CLEARING SELECTION
+		#(LIKE <Alt-ButtonPress-1> IN SuperText):
+
+		$tw->bind('<Alt-Left>' => sub {
+			my $w = shift;
+			$w->markSet('insert','insert - 1c');
+			Tk->break;
+		});
+		$tw->bind('<Alt-Right>' => sub {
+			my $w = shift;
+			$w->markSet('insert','insert + 1c');
+			Tk->break;
+		});
+		$tw->bind('<Alt-Up>' => sub {
+			my $w = shift;
+			$w->markSet('insert',$w->UpDownLine(-1));
+			Tk->break;
+		});
+		$tw->bind('<Alt-Down>' => sub {
+			my $w = shift;
+			$w->markSet('insert',$w->UpDownLine(1));
+			Tk->break;
+		});
+
+		$tw->bind('<Alt-ButtonPress-1>', sub {  #mouseMoveInsert():
+			my $w = shift;
+			my $ev = $w->XEvent;
+			$w->markSet('insert',$ev->xy);
+			Tk->break;
+		});
+
+		#NEAT OLD PCWRITE "FCE" BINDINGS:
+		unless ($v)
+		{
+			$tw->bind($cls, '<Shift-Insert>' => sub{
+				my $w = shift;
+				$w->markSet('__prev_insert', 'insert');
+				$w->insert('insert lineend',"\n");  #INSERT LINE BELOW CURRENT ONE:
+				$w->markSet('insert', '__prev_insert');
+				$w->see('insert + 1 line');
+				Tk->break;
+			});
+			$tw->bind($cls, '<Shift-Delete>' => sub{
+				my $w = shift;
+				#DELETE ENTIRE CURRENT LINE:
+				$w->delete('insert linestart', 'insert lineend + 1 char');
+				Tk->break;
+			});
+			$tw->bind($cls, '<Control-BackSpace>' => sub{
+				my $w = shift;
+				if($w->compare('insert','==','insert wordstart')) {
+					$w->delete('insert - 1c wordstart', 'insert');
+				} else {
+					$w->delete('insert wordstart','insert');
+				}
+				Tk->break;
+			});
+			$tw->bind($cls, '<Control-Delete>' => sub{
+				my $w = shift;
+				if($w->compare('insert','==','insert wordend')) {
+					$w->delete('insert');
+				} else {
+					$w->delete('insert','insert wordend');
+				}
+				Tk->break;
+			});
+			$tw->bind($cls, '<Alt-BackSpace>' => sub{
+				my $w = shift;
+				if($w->compare('insert','==','1.0')) {return;}
+				if($w->compare('insert','==','insert linestart')) {
+					$w->delete('insert - 1c');
+				} else {
+					$w->delete('insert linestart','insert');
+				}
+				Tk->break;
+			});
+			$tw->bind($cls, '<Alt-Delete>' => sub{
+				my $w = shift;
+				if($w->compare('insert','==','insert lineend')) {
+					$w->delete('insert');
+				} else {
+					$w->delete('insert','insert lineend');
+				}
+				Tk->break;
+			});
+		}
 	}
 
 	#NOTE:  <Ctrl-Tab> always & only TABS BETWEEN TOP & BOTTOM OF SPLIT SCREENS,
@@ -2097,7 +2371,7 @@ sub saveSelected
 {
 	$txt = '';
 
-	if ($newsupertext || $AnsiColor)
+	if ($AnsiColor)
 	{
 		eval {$txt = $textScrolled[$activeWindow]->getansi('sel.first','sel.last');};
 	}
@@ -2108,7 +2382,7 @@ sub saveSelected
 	my $lastpos = '';
 	eval { $lastpos = $textScrolled[$activeWindow]->index('sel.last'); };
 	$txt .= "\n"  if ($txt && $lastpos =~ /\.0$/o);
-	if ($newsupertext || $AnsiColor)
+	if ($AnsiColor)
 	{
 		$txt = $textScrolled[$activeWindow]->getansi('0.0','end')  unless ($txt);
 	}
@@ -2184,7 +2458,7 @@ sub printFn
 		close T;
 	}
 	$_ = '';
-	if ($newsupertext || $AnsiColor)
+	if ($AnsiColor)
 	{
 		eval {$_ = $textScrolled[$activeWindow]->getansi('sel.first','sel.last');};
 	}
@@ -2409,7 +2683,13 @@ sub fetchdata
 		my (@fidinfo) = stat($fid);
 		$fileLastUpdated = $fidinfo[8];
 		binmode INFID;
-		$textScrolled[$activeWindow]->delete('0.0','end');
+		if ($v && ($haveTextHighlight && $Tk::TextHighlight::VERSION >= 2.0)
+				|| (($haveSuperText || $ROSuperText) && $Tk::Text::SuperText::VERSION >= 1.2)) {
+			eval "\$textScrolled[\$activeWindow]->Subwidget(\$textsubwidget)->EmptyDocument";
+			$textScrolled[$activeWindow]->delete('0.0','end')  if ($@);
+		} else {
+			$textScrolled[$activeWindow]->delete('0.0','end');
+		}
 		&clearMarks();
 		for ($i=1;$i<=$tagcnt;$i++)
 		{
@@ -2562,7 +2842,7 @@ print DEBUG "-chose (otherwise) $langModule!\n"  if ($debug);
 			$tagFid .= $fileName;
 			$tagFid .= '.etg';
 		}
-		if (($newsupertext || $AnsiColor) && -r $tagFid && open (INFID, $tagFid))
+		if ($AnsiColor && -r $tagFid && open (INFID, $tagFid))
 		{
 			my ($onoff, $tagtype, $tagindx, %tagStartHash);
 			while (<INFID>)
@@ -2639,16 +2919,15 @@ print DEBUG "-chose (otherwise) $langModule!\n"  if ($debug);
 			$_ .= " backup=$backupct."  if ($backupct =~ /\d/o);
 		}
 		&setStatus( $_);
-		unless ($v)
+		return 1  if ($v);
+
+		if ($SuperText)  #ADDED 20080411 TO BLOCK CHANGES FOR UNDO.
 		{
-			if ($textsubwidget =~ /supertext/io)   #ADDED 20080411 TO BLOCK CHANGES FOR UNDO.
-			{
-				$whichTextWidget->resetUndo;   #FOR SOME REASON SUPERTEXT HATH IT'S OWN METHOD NAMES?!
-			}
-			else
-			{
-				eval { $whichTextWidget->ResetUndo; };
-			}
+			$whichTextWidget->resetUndo;  #FOR SOME REASON SUPERTEXT HATH IT'S OWN METHOD NAMES?!
+		}
+		else
+		{
+			eval { $whichTextWidget->ResetUndo; };
 		}
 		return 1;
 	}
@@ -2783,7 +3062,7 @@ sub write2file
 	unless ($opt)
 	{
 		$_ = $textScrolled[$activeWindow]->getansi('0.0','end')
-				if (($newsupertext || $AnsiColor) && $saveopt == 2);
+				if ($AnsiColor && $saveopt == 2);
 	}
 	$_ = $textScrolled[$activeWindow]->get('0.0','end')  unless ($_);
 	chomp;
@@ -2853,7 +3132,7 @@ sub saveTags
 {
 	my $fid = shift;
 
-	if ($newsupertext || $AnsiColor)
+	if ($AnsiColor)
 	{
 		my $ffid = $fid . '.etg';
 		if (defined $tagpath)
@@ -3011,7 +3290,7 @@ sub newSearch
 			-side   => 'top',
 			-pady   => 6);
 
-	if ($newsupertext || $AnsiColor)
+	if ($AnsiColor)
 	{
 		$tagDDlist = $xpopup->Scrolled('Listbox',
 				-scrollbars => 'e',
@@ -3102,7 +3381,6 @@ sub newSearch
 			-command => sub
 	{
 		eval {$curTextWidget->insert('insert',$MainWin->SelectionGet(-selection => 'CLIPBOARD'));};
-		eval {$activewidget->tagRemove('sel','0.0','end');};
 	}
 	);
 	$cbpasteButton->configure(-state => 'disabled')  unless (defined($clipboard));
@@ -3220,19 +3498,19 @@ sub doSearch
 	$findMenubtn->entryconfigure('Modify search', -state => 'normal');
 	$againButton->configure(-state => 'normal');
 	$bkagainButton->configure(-state => 'normal');
-	if ($editor =~ /TextHighlight/o || $viewer =~ /TextHighlight/o)
-	{
-		eval { $whichTextWidget->Subwidget($textsubwidget)->blockHighlighting(1); };
-	}
+#	if ($editor =~ /TextHighlight/o || $viewer =~ /TextHighlight/o)
+#	{
+#		eval { $whichTextWidget->Subwidget($textsubwidget)->blockHighlighting(1); };
+#	}
 #print DEBUG "-at 1 ddlist=$tagDDlist=\n";
 	eval { @searchTagList = $tagDDlist->curselection; };
 #print DEBUG "-at 2 at=$@=\n";
 	if ($newsearch == 2)   #START EDITOR AT THIS POSITION!
 	{
 		$srchstr = $s;
-		$srchopts = '-exact';
-		$srchopts = '-nocase'  if ($srchstr =~ s#/i$##o);
+		$srchopts = $srchOptChoices{$s};
 		$srchwards = 1;
+		$startattop = 1;
 	}
 	else
 	{
@@ -3251,7 +3529,7 @@ sub doSearch
 	}
 	my $srchstrWas = $srchstr;
 	my $hasEOL = ($srchstr =~ s/\\n$/\$/s) ? ' + 1 char' : '';
-	$srchpos = '0.0'  if ($whichTextWidget->index('insert') >= $whichTextWidget->index('end') - 1);
+	$srchpos = '0.0'  if ($newsearch == 2 || $whichTextWidget->index('insert') >= $whichTextWidget->index('end') - 1);
 	$lnoffset = $newsearch ? 0 : 1;
 	$srchpos = $whichTextWidget->index('insert')  unless ($newsearch && $startattop);
 	$startattop = 0;
@@ -3569,10 +3847,19 @@ sub clearMarks
 	{
 		if ($markMenuIndex{$activeTab}[$activeWindow][$i] && $markMenuHash{$activeTab}[$activeWindow]{$markMenuIndex{$activeTab}[$activeWindow][$i]})
 		{
-			$markMenubtn->command(
-					-label => $markMenuIndex{$activeTab}[$activeWindow][$i],
-					-underline => $markMenuHash{$activeTab}[$activeWindow]{$markMenuIndex{$activeTab}[$activeWindow][$i]}->{underline} || '0',
-					-command => $markMenuHash{$activeTab}[$activeWindow]{$markMenuIndex{$activeTab}[$activeWindow][$i]}->{command});
+			if ($markMenuHash{$activeTab}[$activeWindow]{$markMenuIndex{$activeTab}[$activeWindow][$i]}->{underline} =~ /\d/o)
+			{
+				$markMenubtn->command(
+						-label => $markMenuIndex{$activeTab}[$activeWindow][$i],
+						-underline => $markMenuHash{$activeTab}[$activeWindow]{$markMenuIndex{$activeTab}[$activeWindow][$i]}->{underline} || '0',
+						-command => $markMenuHash{$activeTab}[$activeWindow]{$markMenuIndex{$activeTab}[$activeWindow][$i]}->{command});
+			}
+			else
+			{
+				$markMenubtn->command(
+						-label => $markMenuIndex{$activeTab}[$activeWindow][$i],
+						-command => $markMenuHash{$activeTab}[$activeWindow]{$markMenuIndex{$activeTab}[$activeWindow][$i]}->{command});
+			}
 		}
 	}
 	$marklist{$activeTab}[$activeWindow] = ':insert:sel:';
@@ -3587,10 +3874,19 @@ sub resetMarks
 	{
 		if ($markMenuIndex{$activeTab}[$activeWindow][$i] && $markMenuHash{$activeTab}[$activeWindow]{$markMenuIndex{$activeTab}[$activeWindow][$i]})
 		{
-			$markMenubtn->command(
-					-label => $markMenuIndex{$activeTab}[$activeWindow][$i],
-					-underline => $markMenuHash{$activeTab}[$activeWindow]{$markMenuIndex{$activeTab}[$activeWindow][$i]}->{underline} || '0',
-					-command => $markMenuHash{$activeTab}[$activeWindow]{$markMenuIndex{$activeTab}[$activeWindow][$i]}->{command});
+			if ($markMenuHash{$activeTab}[$activeWindow]{$markMenuIndex{$activeTab}[$activeWindow][$i]}->{underline} =~ /\d/o)
+			{
+				$markMenubtn->command(
+						-label => $markMenuIndex{$activeTab}[$activeWindow][$i],
+						-underline => $markMenuHash{$activeTab}[$activeWindow]{$markMenuIndex{$activeTab}[$activeWindow][$i]}->{underline} || '0',
+						-command => $markMenuHash{$activeTab}[$activeWindow]{$markMenuIndex{$activeTab}[$activeWindow][$i]}->{command});
+			}
+			else
+			{
+				$markMenubtn->command(
+						-label => $markMenuIndex{$activeTab}[$activeWindow][$i],
+						-command => $markMenuHash{$activeTab}[$activeWindow]{$markMenuIndex{$activeTab}[$activeWindow][$i]}->{command});
+			}
 		}
 	}
 }
@@ -3608,6 +3904,11 @@ sub addMark
 			($intext,$ul) = split(/\,/o, $intext);
 			$ul = 0  unless ($ul =~ /^\d+$/o);
 			$ul = 4  if (!$ul && !$filetype && $intext =~ /^sub /o);
+			#JWT:ALL-NUMERIC (LINE#) MARKS CAN CAUSE CURSOR-JUMPING BEHAVIOR AND EVEN PROGRAM LOCKUPS!!!
+			if ($intext =~ /^[\d\.]+$/o) {
+				$intext = 'posn' . $intext;
+				$ul = -1;
+			}
 			#EVAL SO THAT "$intext" IS SET STATICALLY!
 			$markWidget{$activeTab}[$activeWindow]{$intext} = $textScrolled[$activeWindow];
 			#########eval { $markMenubtn->menu->delete($intext); };
@@ -3629,11 +3930,19 @@ sub addMark
 						\&setStatus(\"Cursor now at \$gotopos.\");
 						\$markWidget{\"$activeTab\"}[$activeWindow]{\"$intext\"}->focus;
 					};
-					\$markMenubtn->command(
-						-label => '$intext',
-						-underline => \$ul,
-						-command => \$markMenuHash{\"$activeTab\"}[$activeWindow]{\"$intext\"}->{command}
-					);
+					if (\$ul >= 0) {
+						\$markMenubtn->command(
+							-label => '$intext',
+							-underline => \$ul,
+							-command => \$markMenuHash{\"$activeTab\"}[$activeWindow]{\"$intext\"}->{command}
+						);
+					} else {
+print \"-!!!- NO UNDERLINE!\n\";
+						\$markMenubtn->command(
+							-label => '$intext',
+							-command => \$markMenuHash{\"$activeTab\"}[$activeWindow]{\"$intext\"}->{command}
+						);
+					}
 			";
 			eval $evalstr  unless ($markMenuHash{$activeTab}[$activeWindow]{$intext});
 			$marklist{$activeTab}[$activeWindow] .= ':' . $intext . ':';
@@ -4071,11 +4380,11 @@ print STDERR "-10- NOT whole thing, start=$selstart, end=$selend, replstr=$repls
 	my ($replstrx) = $replstr;
 	$replstrx = ''  if ($replstr eq '``');  #TREAT '' AS EMPTY STR!
 	$srchpos = $selstart;
+#XXXXX DECIDED BETTER TO SHOW HIGHLIGHTING AS IT GOES:	if ($editor =~ /TextHighlight/o || $viewer =~ /TextHighlight/o)
+	{
+		eval { $textScrolled[$activeWindow]->blockHighlighting(1); };
+	}
 	&beginUndoBlock($whichTextWidget);
-#DECIDED BETTER TO SHOW HIGHLIGHTING AS IT GOES:	if ($editor =~ /TextHighlight/o || $viewer =~ /TextHighlight/o)
-#	{
-#		eval { $textScrolled[$activeWindow]->blockHighlighting(1); };
-#	}
 $textScrolled[$activeWindow]->markSet('_prev','insert');
 print STDERR "--srchstr WAS=$srchstr=\n"  if ($debug);
 	#NOTE:  TO DELETE ENTIRE LINES THAT CONTAIN SEARCH-STR, SPECIFY LIKE:
@@ -4100,7 +4409,7 @@ print STDERR "--HASEOL=$hasEOL= srchstr NOW=$srchstr=\n"  if ($debug);
 		$chgstr = $whichTextWidget->get('foundme.first','foundme.last');
 print STDERR "--CHGSTR WAS=$chgstr= replstr=$replstr=\n"  if ($debug);
 		&addMark($chgstr)  if ($markAllMatches);
-		if (length($replstr))
+		if (length($replstr) && !$v)
 		{
 			if ($srchopts eq '-regexp')
 			{
@@ -4124,8 +4433,14 @@ print STDERR "--NOCASE: CHGSTR NOW=$chgstr= FM=$srchstr= TO=$replstrx=\n"  if ($
 print STDERR "--CASE: CHGSTR NOW=$chgstr= FM=$srchstr= TO=$replstrx=\n"  if ($debug);
 			}
 		}
-		$whichTextWidget->delete('foundme.first',"foundme.last$hasEOL");
-		$whichTextWidget->insert('insert',$chgstr);
+		$whichTextWidget->delete('foundme.first',"foundme.last$hasEOL")  unless ($v);
+		my $prevcsr = $whichTextWidget->index('insert');
+		$whichTextWidget->insert('insert',$chgstr)  unless ($v);
+		#JWT:NOTE, SOME TEXTWIDGETS LEAVE THE INSERT CURSOR AT THE BEGINNING OF WHAT WAS INSERTED, SO COMPENSATE:
+		if (!$v && $whichTextWidget->compare($prevcsr,'==',$whichTextWidget->index('insert'))) {
+			$srchpos += $lnoffset;
+print STDERR "w:INFINITE LOOP AVOIDED (srchpos increased by=$lnoffset= to=$srchpos=\n";
+		}
 		$whichTextWidget->tagDelete('foundme');
 		$lnoffset = length($chgstr);
 		++$tagcnt;
@@ -4137,11 +4452,11 @@ print STDERR "--CASE: CHGSTR NOW=$chgstr= FM=$srchstr= TO=$replstrx=\n"  if ($de
 				-foreground     => 'black');
 		$srchpos = $whichTextWidget->index("$srchpos + $lnoffset char");
 	}
-#	if ($editor =~ /TextHighlight/o || $viewer =~ /TextHighlight/o)
-#	{
-#		eval { $textScrolled[$activeWindow]->blockHighlighting(0); };
-#	}
 	&endUndoBlock($whichTextWidget);
+	if ($editor =~ /TextHighlight/o || $viewer =~ /TextHighlight/o)
+	{
+		eval { $textScrolled[$activeWindow]->blockHighlighting(0); };
+	}
 	my $chgd = (length($replstr) > 0) ? '/changed' : '';
 	&setStatus( "..$tagcnt matches of \"$srchstr\" found${chgd}!");
 	$whichTextWidget->tagAdd('sel', 'selstartmk', 'selendmk');
@@ -4151,8 +4466,9 @@ print STDERR "--CASE: CHGSTR NOW=$chgstr= FM=$srchstr= TO=$replstrx=\n"  if ($de
 sub shocoords
 {
 	my ($calledbymouse) = shift;
-#	$text1Text->SUPER::mouseSelectAutoScanStop;    #ADDED FOR SUPERTEXT!
-	$whichTextWidget->mouseSelectAutoScanStop  if ($SuperText && $calledbymouse && !$v);
+#	$text1Text->SUPER::mouseSelectAutoScanStop;  #ADDED FOR SuperText-BASED WIDGETS!
+	eval { $whichTextWidget->mouseSelectAutoScanStop }
+			if (($SuperText || $haveTextHighlight) && $calledbymouse);
 	my ($gotopos) = $textScrolled[$activeWindow]->index('insert');
 	$textScrolled[$activeWindow]->see($gotopos);
 	&setStatus( $gotopos);
@@ -4377,125 +4693,80 @@ sub setTag
 
 sub setTheme
 {
-	my ($bg, $fg, $c, $font);
+	my $themedata = shift;
+
+	my $oldcsrfg = $textScrolled[$activeWindow]->Subwidget($textsubwidget)->cget('-insertbackground');
 	my $oldfg = $textScrolled[$activeWindow]->Subwidget($textsubwidget)->cget('-foreground');
 	my $oldbg = $textScrolled[$activeWindow]->Subwidget($textsubwidget)->cget('-background');
-	my ($fgsame, $bgsame);
-	$foreground = 0;
-	eval $_[0];
-	$fgsame = 1  if ($fg =~ s/same//io);
-	$bgsame = 1  if ($bg =~ s/same//io);
-	my $fgisblack;
-	$fgisblack = 1  if ($fg =~ /black/io); #KLUDGE SINCE SETPALETTE/SUPERTEXT BROKE!
-	$c = ''  if ($c =~ /same/io);
-	if ($c =~ /default/io)
-	{
-		eval { $MainWin->optionReadfile('~/.Xdefaults') or $MainWin->optionReadfile('/etc/Xdefaults'); };
-		my $c0;
-		$c0 = $MainWin->optionGet('tkVpalette','*')  if ($v);
-		$c0 ||= $MainWin->optionGet('tkPalette','*');
-		$c = $c0  if ($c0);
-		if ($c)
-		{
-			$foreground ? $MainWin->setPalette(background => $c, foreground => $foreground)
-					: $MainWin->setPalette($c);
+	my $paletteChanged = 0;
+	if ($themedata =~ /^\#/o && length($themedata) == 7) {  # SINGLE COLOR, IE:  "#FF0000"
+		$MainWin->setPalette($themedata);
+		$paletteChanged = 1;
+	} else {
+		$themedata = "\$c='$themedata';"  unless ($themedata =~ /\=/o);
+		$themedata =~ s/\$(\w+)\=/\$colors\{$1\}\=/g;
+		my %colors = ();
+		eval ($themedata);
+		if ($@) {
+			warn "e:could not change theme ($@) data=($themedata)!\n";
+			return;
 		}
-		$c = '';
-	}
-	if ($c)
-	{
-		$foreground ? $MainWin->setPalette(background => $c, foreground => $foreground)
-					: $MainWin->setPalette($c);
-		unless ($fg)
-		{
-			if ($palette)
-			{
-				$fg = 'green';
-			}
-			else
-			{
-				$fg = $MainWin->cget('-foreground');
-			}
-		}
-		unless ($bg)
-		{
-			if ($palette)
-			{
-				$bg = 'black';
-			}
-			else
-			{
-				$bg = $MainWin->cget('-background');
-			}
-		}
-		unless ($nobrowsetabs)
-		{
-			my $acbgColor = $MainWin->Palette->{ activeBackground } || 'gray30';    #NEXT 2 MAKE TAB ROW SAME COLOR AS REST OF WINDOW:
-#TONE IT DOWN SLIGHTLY:		my $robgColor = $MainWin->Palette->{ readonlyBackground } || 'gray40';
-			my $robgColor = $MainWin->Palette->{ disabledForeground } || 'gray40';
-			my $bgColor = $MainWin->Palette->{ background };
-			my $foColor = $MainWin->Palette->{ foreground };
-			$tabbedFrame->configure(-background => $bgColor, -inactivebackground => $robgColor, -backpagecolor => $acbgColor, -focuscolor => $foColor);
-		}
-	}
-	else
-	{
-		if ($v)
-		{
+		my $c = delete($colors{'c'});
+		my $bg = delete($colors{'bg'});
+		my $fg = delete($colors{'fg'});
+		$colors{'foreground'} = $foreground  if (defined($foreground) && !defined($colors{'foreground'}));
+		my $csrfg = $fg;
+		$c = '0'  if ($c =~ /^same$/i);
+		my ($fgsame, $bgsame);
+		$fgsame = 1  if ($fg =~ s/same//io);
+		$bgsame = 1  if ($bg =~ s/same//io);
+		my $fgisblack;
+		$fgisblack = 1  if ($fg =~ /black/io); #KLUDGE SINCE SETPALETTE/SUPERTEXT BROKE!
+		if ($c =~ /default/io) {
 			eval { $MainWin->optionReadfile('~/.Xdefaults') or $MainWin->optionReadfile('/etc/Xdefaults'); };
-			$c = $MainWin->optionGet('tkVpalette','*');
-#			$c ||= 'bisque3';
-			$fg ||= 'black';
-#			$bg ||= 'bisque3';
-			if ($c)
-			{
-				$foreground ? $MainWin->setPalette(background => $c, foreground => $foreground)
-						: $MainWin->setPalette($c)
+			my $c0;
+			$c0 = $MainWin->optionGet('tkVpalette','*')  if ($v);
+			$c0 ||= $MainWin->optionGet('tkPalette','*');
+			$c = $c0  if ($c0);
+			if ($c) {
+				$MainWin->setPalette(background => $c, %colors);
+				$paletteChanged = 1;
 			}
+			$c = '';
 		}
-		else
-		{
+		if ($c) {
+			$MainWin->setPalette(background => $c, %colors);
+			$paletteChanged = 1;
+			$fg = $MainWin->cget('-foreground')  unless (defined $fg);
+			$bg = $MainWin->cget('-background')  unless (defined $bg);
+			$csrfg = $fg;
+		} elsif (!$v) {
 			$fg = 'green'  unless ($fg);
 			$bg = 'black'  unless ($bg);
-			eval { $MainWin->optionReadfile('~/.Xdefaults') or $MainWin->optionReadfile('/etc/Xdefaults'); };
-#			$c = $MainWin->optionGet('tkPalette','*');
-#			$MainWin->setPalette($c)  if ($c);
+			$csrfg = '#d9d9d9';
 		}
+		$fgisblack = 1  if ($fg =~ /black/io);
+		$fg = $oldfg || 'green'  if ($fgsame);
+		$csrfg = $oldcsrfg || '#d9d9d9'  if ($fgsame);
+		$bg = $oldbg || 'black'  if ($bgsame);
+		if ($fg) {
+			$textScrolled[$activeWindow]->Subwidget($textsubwidget)->configure('-foreground' => $fg);
+			$textScrolled[$activeWindow]->Subwidget($textsubwidget)->configure('-insertbackground' => (defined($colors{'foreground'})
+					? $colors{'foreground'} : $csrfg));
+		}
+		$textScrolled[$activeWindow]->Subwidget($textsubwidget)->configure(-background => $bg)  if ($bg);
 	}
-	$fgisblack = 1  if ($fg =~ /black/io);
-	$fg = $oldfg || 'green'  if ($fgsame);
-	$bg = $oldbg || 'black'  if ($bgsame);
-	$textScrolled[$activeWindow]->Subwidget($textsubwidget)->configure(
-			-background => $bg)  if ($bg);
-	$textScrolled[$activeWindow]->Subwidget($textsubwidget)->configure(
-			-foreground => $fg)  if ($fgisblack || ($fg && $fg !~ /black/io));
-	if ($bummer && $c) {
-		$w_menu->configure('-background' => $c, '-foreground' => $fg);
-		$asdosButton->configure('-background' => $c);
-		$asdosButton->state($asdosButton->state);
-	}
-	
 
-	#NOW FIX THE TEXT CURSOR!!!!
-
-	my ($red, $green, $blue) = $textScrolled[$activeWindow]->Subwidget($textsubwidget)->rgb(
-		$textScrolled[$activeWindow]->Subwidget($textsubwidget)->cget('-background'));
-#	my @rgb = sort {$b <=> $a} ($red, $green, $blue);
-#	my $max = $rgb[0]+$rgb[1];  #TOTAL BRIGHTEST 2.
-#	if ($max > 52500)  #LOOKS GOOD FOR ME.
-	my $max = $red+1.5*$green+0.5*$blue;
-	if ($max > $TwilightThreshold)  #LOOKS GOOD FOR ME.
+	#FIX THE TAB NOTEBOOK'S COLORS:
+	unless (!$paletteChanged || $nobrowsetabs)
 	{
-		$csrFG = "black";      #SPEED LIMIT 70
+		my $acbgColor = $MainWin->Palette->{ activeBackground } || 'gray30';    #NEXT 2 MAKE TAB ROW SAME COLOR AS REST OF WINDOW:
+#TONE IT DOWN SLIGHTLY:		my $robgColor = $MainWin->Palette->{ readonlyBackground } || 'gray40';
+		my $robgColor = $MainWin->Palette->{ disabledForeground } || 'gray40';
+		my $bgColor = $MainWin->Palette->{ background };
+		my $foColor = $MainWin->Palette->{ foreground };
+		$tabbedFrame->configure(-background => $bgColor, -inactivebackground => $robgColor, -backpagecolor => $acbgColor, -focuscolor => $foColor);
 	}
-	else
-	{
-		$csrFG = "white";      #NIGHT 65
-	}
-	$textScrolled[$activeWindow]->Subwidget($textsubwidget)->configure(
-			-insertbackground => $csrFG);
-
-	&setFont($font)  if ($font =~ /\d/o);
 }
 
 sub accept_drop
@@ -4553,7 +4824,7 @@ sub backupFn
 	}
 	else
 	{
-		if ($newsupertext || $AnsiColor)
+		if ($AnsiColor)
 		{
 			$_ = $textScrolled[$activeWindow]->getansi('0.0','end');
 		}
@@ -4848,10 +5119,19 @@ sub splitScreen
 			{
 				if ($markMenuIndex{$activeTab}[$activeWindow][$i] && $markMenuHash{$activeTab}[$activeWindow]{$markMenuIndex{$activeTab}[$activeWindow][$i]})
 				{
-					$markMenubtn->command(
-							-label => $markMenuIndex{$activeTab}[$activeWindow][$i],
-							-underline => $markMenuHash{$activeTab}[$activeWindow]{$markMenuIndex{$activeTab}[$i]}->{underline} || '0',
-							-command => $markMenuHash{$activeTab}[$activeWindow]{$markMenuIndex{$activeTab}[$i]}->{command});
+					if ($markMenuHash{$activeTab}[$activeWindow]{$markMenuIndex{$activeTab}[$i]}->{underline} >= 0)
+					{
+						$markMenubtn->command(
+								-label => $markMenuIndex{$activeTab}[$activeWindow][$i],
+								-underline => $markMenuHash{$activeTab}[$activeWindow]{$markMenuIndex{$activeTab}[$i]}->{underline} || '0',
+								-command => $markMenuHash{$activeTab}[$activeWindow]{$markMenuIndex{$activeTab}[$i]}->{command});
+					}
+					else
+					{
+						$markMenubtn->command(
+								-label => $markMenuIndex{$activeTab}[$activeWindow][$i],
+								-command => $markMenuHash{$activeTab}[$activeWindow]{$markMenuIndex{$activeTab}[$i]}->{command});
+					}
 				}
 			}
 			$marklist{$activeTab}[$activeWindow] = ':insert:sel:';
@@ -5298,7 +5578,7 @@ print DEBUG "-SaveOnDestroy:  args=".join('|',@_)."= nst=$newsupertext=\n"  if (
 		(my $rand = time) =~ s/^\d\d\d\d\d//o;
 		$tofid =~ s/\.tmp$/\_${rand}\.tmp/;
 	}
-	if ($newsupertext || $AnsiColor)
+	if ($AnsiColor)
 	{
 		$_ = $w->getansi('0.0','end');
 #print DEBUG "-??????- SaveOnDestroy1: cash10=".substr($_,0,10)."=\n";
@@ -5615,7 +5895,7 @@ Themename:$c="I<color>"|""|DEFAULT; $fg="I<color>"|same; $bg="I<color>|same">
 
 (viewer - v.pl):  Same as for B<-editor>, but applies to v.pl 
 (viewer-mode).  Should be based on L<Tk::ROText>.  The "Tk::" is omitted.
-Known to work:  I<ROText>, I<ROTextANSIColor>, I<ROSuperText>, I<ROTextHighlight>, 
+Known to work:  I<ROText>, I<ROTextANSIColor>, I<SuperText>, I<ROTextHighlight>, 
 and I<XMLViewer>.  Default:  I<ROText>.
 
 =back

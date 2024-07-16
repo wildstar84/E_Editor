@@ -180,7 +180,7 @@ OPTIONS
     -viewer=*module*
         (viewer - v.pl): Same as for -editor, but applies to v.pl
         (viewer-mode). Should be based on Tk::ROText. The "Tk::" is omitted.
-        Known to work: *ROText*, *ROTextANSIColor*, *ROSuperText*,
+        Known to work: *ROText*, *ROTextANSIColor*, *SuperText*,
         *ROTextHighlight*, and *XMLViewer*. Default: *ROText*.
 
     You can also specify the above options in an "ini" file, (e.ini for

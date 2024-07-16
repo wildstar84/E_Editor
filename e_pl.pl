@@ -710,7 +710,7 @@ sub perlFn2
 
 sub shebang
 {
-	my $perlpath = `which perl`;
+	my $perlpath = (-x '/usr/bin/perl') ? '/usr/bin/perl' : `which perl`;
 	chomp($perlpath);
 	if ($perlpath)
 	{

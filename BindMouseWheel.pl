@@ -5,7 +5,7 @@ sub BindMouseWheel
 
 	my($w) = @_;
 
-	if ($^O eq 'MSWin32')
+	if ($^O eq 'MSWin32')  #BUMMER!:
 	{
 		$w->bind('<MouseWheel>' =>
 		[ sub { $_[0]->yview('scroll', -($_[1] / 120) * 1, 'units') },
@@ -30,29 +30,28 @@ sub BindMouseWheel
 		#     Option      "ZAxisMapping" "4 5"
 		# EndSection
 
-		$MainWin->bind('<Alt-Left>' => sub
-			{ 
-				$_[0]->xview('scroll', -1, 'units');
-				Tk->break;
-			}
-		);
-		$MainWin->bind('<Alt-Right>' => sub
-			{ 
-				$_[0]->xview('scroll', +1, 'units');
-				Tk->break;
-			}
-		);
-		$MainWin->bind('<Alt-Button-4>' => sub
+#DEPRECIATED:		$w->bind('<Alt-Left>' => sub
+#DEPRECIATED:			{ 
+#DEPRECIATED:				$_[0]->xview('scroll', -1, 'units');
+#DEPRECIATED:				Tk->break;
+#DEPRECIATED:			}
+#DEPRECIATED:		);
+#DEPRECIATED:		$w->bind('<Alt-Right>' => sub
+#DEPRECIATED:			{ 
+#DEPRECIATED:				$_[0]->xview('scroll', +1, 'units');
+#DEPRECIATED:				Tk->break;
+#DEPRECIATED:			}
+#DEPRECIATED:		);
+		#NEXT 2 ALLOW HORIZONTAL SCROLLING ON SINGLE-WHEEL MOUSE (Alt-Wheel):
+		$w->bind('<Alt-Button-4>' => sub
 			{ 
 					$_[0]->xview('scroll', -1, 'units');
-					#$_[0]->yview('scroll', +1, 'units');
 					Tk->break;
 			}
 		);
-		$MainWin->bind('<Alt-Button-5>' => sub
+		$w->bind('<Alt-Button-5>' => sub
 			{ 
 					$_[0]->xview('scroll', +1, 'units');
-					#$_[0]->yview('scroll', -1, 'units');
 					Tk->break;
 			}
 		);

@@ -5,28 +5,36 @@ $perlMenubtn = $w_menu->Menubutton(
 $perlMenubtn->command(
 	-label => 'Check',
 	-underline =>0,
-	-command => [\&perlFn,0]);
+	-command => [\&c_Fn,0]);
 $perlMenubtn->command(
 	-label => 'Run',
 	-underline =>0,
-	-command => [\&perlFn,1]);
+	-command => [\&c_Fn,1]);
 $perlMenubtn->command(
 	-label => 'Comment',
 	-underline =>1,
 	-command => [\&commentFn]);
 $perlMenubtn->command(
-	-label => 'Comment (CPP)',
+	-label => 'Comment (C++)',
 	-underline =>10,
 	-command => [\&commentFnCPP]);
 $perlMenubtn->pack(@menuPackOps);
 
-sub perlFn
+if (defined($v))
+{
+	$perlMenubtn->entryconfigure('Comment', -state => 'disabled');
+	$perlMenubtn->entryconfigure('Comment (C++)', -state => 'disabled');
+}
+
+sub c_Fn
 {
 	my ($runit) = shift;
 
 	`rm $hometmp/*.o`;
 	`rm a.out`;
 	`echo "" >$hometmp/e.out.tmp`;
+	$MainWin->Busy;
+	$_ = '';
 	system "gcc $ENV{C_OPTIONS} $hometmp/e.src.c  >$hometmp/e.out.tmp 2>&1"  unless (&writedata("$hometmp/e.src.c"));
 
 	$compileResult = $?;
@@ -45,7 +53,7 @@ sub perlFn
 	#elsif (!compileResult)
 	#{
 #print "-4: cr=$compileResult=\n";
-		`echo "Syntax OK!\n" >$hometmp/e.out.tmp`  unless ($runit || $compileResult);
+		`echo "Syntax OK!\n" >>$hometmp/e.out.tmp`  unless ($runit || $compileResult);
 	#}
 	$xpopup2->destroy  if (Exists($xpopup2));
 	$xpopup2 = $MainWin->Toplevel;
@@ -153,6 +161,7 @@ sub perlFn
 		}
 		close TEMPFID;
 	}
+	$MainWin->Unbusy;
 }
 
 sub commentFn

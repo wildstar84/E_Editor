@@ -121,8 +121,8 @@ Changes:
 		copy files with unique names in the "/tmp" directory when opening 
 		a file or closing without saving, or when the user selects "[File]
 		.[Back up /tmp *] options to save snapshots.
-5.99		- Add little button to full the wasted space in the lower right 
-		corner the scrollbars that jumps to position 0.0 ("home").
+5.99		- Add little button to fill the wasted space in the lower right 
+		corner by the scrollbars:  that jumps to position 0.0 ("home").
 6.00		- Append .cdout directory to unpathed filenames when opening, if 
 		it exists.
 6.10		- Fixed minor issues with dual-screen (screen-splitting) option.
@@ -200,7 +200,77 @@ Changes:
 		single button without having to go into the File menu.
 		- Allow a position (line#[.col#] to be appended (preceeded by a colon) 
 		to a file-name to cause the file to be opened prepositioned there.
-6.35		- Add new [+Tab] button for opening a file in a new tab (was [Open+], 
+6.35		23/01/05
+		- Add new [+Tab] button for opening a file in a new tab (was [Open+], 
 		but that button renamed to [Open] and restored to it's originial 
 		function.
 		- Remove [Exit] ([Save]+[Quit]) button to reduce clutter (redundant).
+6.36    -not released-
+		- Add some old PC-Write(tm) key bindings I used back in the day, namely 
+		Shift-Insert (Insert blank line), Shift-Delete (Delete current line), 
+		Ctrl-BackSpace (Delete word left), Ctrl-Delete (Delete word right), 
+		Alt-BackSpace (Delete to start of line), and Alt-Delete (Delete to end 
+		of line.
+6.40    -not released-
+		- Add & fix some SuperText bindings for consistancy w/SuperText when 
+		not using SuperText, and make work with latest TextHighlight v2+.  
+		- Fix potential infinite loop situation in global searches due to 
+		slight inconsistancies in the way different Text* widgets handle the 
+		cursor and select tagging.
+		- Fix minor issue with imwheel bindings.
+6.41    -not released-
+		- Add Tk::TextHighlight v2's new "-smartindent" feature to also make 
+		available when not using Tk::TextHighlight v2+.
+		- Fix inability to load data properly when changing to a different 
+		file in v (readonly version) due to Tk::TextHighlight v2+'s stricter 
+		enforcement of readonly mode.
+		- Fix apparantly long-standing bug that caused numeric (line-
+		positioning) bookmarks to fail (we now automatically prepend the 
+		string "posn" to such numeric marks.
+6.42    -not released
+		- Fix some Tk::TextANSIColor support issues.
+		- Treat files with the ".cc" extension as C-ish files ("use C" menu 
+		option).
+		- Improve the "smartindent" feature copied from Tk::TextHighlight v2.
+		- Slightly improve rehighlighting speed during searches.
+		- Fix bug in the Perl.Highlight Fns menu option that inserted a copy 
+		of the found function name next to the highlighted function when using 
+		v (READONLY) mode (must NOT do that)!
+v6.43   24/07/16
+		- Fix wheelmouse bindings to not try to require BindMouseWheel.pl if 
+		using Tk::Text::SuperText v1.2+ as this is no longer necessary.  
+		Also apply BindMouseWheel (if still needed) to the bottom pane if 
+		split-window.
+		- Do not error if BindMouseWheel.pl is requested but not installed.
+		- Do not require Text::Tabs module anymore as it is not used.
+		- Fix failure of the "-s='search string'" to find and place the cursor 
+		when starting up if the "_Bookmark" was set at a position after the 
+		last occurrance of the "search string".  Also allow post-pending 
+		"\i" to the search string to search case-insensitively.  
+		Note:  currently full regex expressions are not permitted in the "-s" 
+		option.
+		- Touch up the Error/Warning/Are You Sure dialogs a bit.
+		- Stop removing the selection tag when doing a global search (when 
+		search limited to a selected area).
+		- Fix inconsistancies in some theme-change situations, and support 
+		additional color parameters in .myethemes (besides the basic "$c" 
+		(palette), bg & fg (text areas).  Examples are "$background", 
+		"$foreground" (non-text area bg & fg), $insertBackground (cursor 
+		color), etc. supported by Tk::setPalette.  Also make sure palette 
+		changes are applied to the (Tk::Notebook) tabs' appearance.
+		Note:  one will often need to apply theme changes to each tab and 
+		both top and bottom text widgets (a bug that can also be viewed as a 
+		feature!
+		- Make sure all the additional language-specific menu items that can 
+		alter the text are all greyed out when using v (readonly) version!
+		- Update copyright year to 2024.
+		- Fix the C.Check (syntax), which was not working at all.
+		- Make the Perl.shabang menu option first check for the existance of 
+		/usr/bin/perl & use that before going with "which perl".  This to 
+		address the common situation of having a symlink from 
+		/usr/local/bin/perl to /usr/bin/perl but normally wanting to use 
+		/usr/bin/perl in programs being created for public release, as the 
+		latter IS the normal expected location of Perl on most machines.
+		- JCutCopyPaste.pl - Fix minor issues with selecting proper cut buffer.
+		- BindMouseWheel.pl - Removed obsolete main-window bindings that 
+		assume the main window is always named "$MainWin".
