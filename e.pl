@@ -354,7 +354,7 @@ use Tk::JFileDialog;
 
 #-----------------------
 
-$vsn = '6.43';
+$vsn = '6.44';
 
 $editmode = 'Edit';
 if ($v)
@@ -834,8 +834,8 @@ $editMenubtn->separator;
 $editMenubtn->command(-label => 'Colors',   -underline =>1, -command => [\&doColorEditor]);
 #		unless ($bummer);
 $editMenubtn->command(-label => 'Insert file',   -underline =>0, -command => [\&appendfile]);
-$editMenubtn->command(-label => 'Edit This',   -underline =>1, -command => [\&editfile])
-		if ($v);
+$editMenubtn->command(-label => ($v ? 'Edit This' : 'View This'),   -underline => ($v ? 1 : 0),
+		-command => [\&editfile,$v]);
 $editMenubtn->command(-label => 'Undo',
 		-underline =>0,
 		-accelerator => 'Alt-u',
@@ -5420,6 +5420,7 @@ sub endUndoBlock
 
 sub editfile
 {
+	my $editit = shift;
 	for (my $i=0;$i<=1;$i++)
 	{
 		if ($cmdfile{$activeTab}[$i])
@@ -5430,7 +5431,11 @@ sub editfile
 	}
 	my $curposn = $textScrolled[$activeWindow]->index('insert');
 	my $cmd = $0;
-	$cmd =~ s/\bv([\w\.]*)/e$1/;
+	if (defined($editit) && $editit == 1) {
+		$cmd =~ s/\bv([\w\.]*)/e$1/;
+	} else {
+		$cmd =~ s/\be([\w\.]*)/v$1/;
+	}
 	my $cmdArgs = $cmdfile{$activeTab}[$activeWindow];
 	system "$cmd -nb -l=$curposn $cmdArgs &";
 }
