@@ -354,7 +354,7 @@ use Tk::JFileDialog;
 
 #-----------------------
 
-$vsn = '6.44';
+$vsn = '6.45';
 
 $editmode = 'Edit';
 if ($v)
@@ -364,9 +364,10 @@ if ($v)
 #	$haveTextHighlight = 0;
 }
 
-my (%cmdfile, %marklist, %opsysList, %alreadyHaveXMLMenu, %activeWindows, %text1Hash);
+my (%marklist, %opsysList, %alreadyHaveXMLMenu, %activeWindows, %text1Hash);
 my (%scrnCnts, %saveStatus);
 my $nextTab = '1';
+our %cmdfile;
 
 $systmp ||= '/tmp';
 $hometmp = (-w "${homedir}tmp") ? "${homedir}tmp" : $systmp;
@@ -1551,7 +1552,7 @@ unless ($haveTextHighlight && $Tk::TextHighlight::VERSION >= 2.0) {
 #		my $insertStuff = "\n";
 		my $insertStuff = ($textsubwidget =~ /supertext/i) ? "\n" : '';
 		my $s = $cw->get("$i", "$i lineend");
-		&beginUndoBlock;
+		&beginUndoBlock($textsubwidget);
 		#if ($s =~ /\S/o)  #JWT: UNCOMMENT TO CAUSE SUBSEQUENT BLANK LINES TO NOT BE AUTOINDENTED.
 		#{
 			#$s =~ /^(\s+)/;  #CHGD. TO NEXT 20060701 JWT TO FIX "e" BEING INSERTED INTO LINE WHEN AUTOINDENT ON?!
@@ -1584,7 +1585,7 @@ unless ($haveTextHighlight && $Tk::TextHighlight::VERSION >= 2.0) {
 			}
 		#}  #JWT: UNCOMMENT TO CAUSE SUBSEQUENT BLANK LINES TO NOT BE AUTOINDENTED.
 		$cw->insert('insert', $insertStuff);
-		&endUndoBlock;
+		&endUndoBlock($textsubwidget);
 		$cw->see('insert linestart');
 		Tk->break;
 	}
@@ -3317,7 +3318,7 @@ sub newSearch
 	$backButton = $srchdirFrame->Radiobutton(
 			-text   => 'Backwards?',
 			-underline => 0,
-			-takefocus      => 1,
+			-takefocus => 1,
 			-value	=> 0,
 			-variable=> \$srchwards);
 	$backButton->pack(
@@ -3396,11 +3397,18 @@ sub newSearch
 		if ($srchTextVar)
 		{
 			$replText->delete('0','end');
-			$replText->insert('end','\#$1');	
+			if ($cmdfile{$activeTab}[$activeWindow] =~ /\.js$/i) {
+				$replText->insert('end','\/\/$1');
+			} elsif ($cmdfile{$activeTab}[$activeWindow] =~ /\.mod$/i) {
+				$replText->insert('end','\(\* $1 \*\)');
+			} else {
+				$replText->insert('end','\#$1');
+			}
 		}
 		else
 		{
-			$srchTextVar = ($cmdfile{$activeTab}[$activeWindow] =~ /\.(?:js|.*ht.+)$/io) ? '^(alert)' : '^(print|for)';
+			$srchTextVar = ($cmdfile{$activeTab}[$activeWindow] =~ /\.js$/io) ? '^(alert)' : '^(print|for)';
+			$srchTextVar = '^(Write.+)$'  if ($cmdfile{$activeTab}[$activeWindow] =~ /\.mod$/io);
 		}
 		$srchText->icursor(length($srchTextVar));
 		$srchopts = '-regexp';
@@ -3419,7 +3427,7 @@ sub newSearch
 			-text => 'Sub',
 			-command => sub
 	{
-		$srchTextVar = ($cmdfile{$activeTab}[$activeWindow] =~ /\.(?:js|.*ht.+)$/io) ? 'function ' : 'sub ';
+		$srchTextVar = ($cmdfile{$activeTab}[$activeWindow] =~ /\.js$/io) ? 'function ' : 'sub ';
 		$srchTextVar = 'PROCEDURE '  if ($cmdfile{$activeTab}[$activeWindow] =~ /\.mod$/io);
 #print DEBUG "??? current fid=$cmdfile{$activeTab}[$activeWindow]= stv=$srchTextVar=\n"  if ($debug);
 		$srchText->icursor(length($srchTextVar));
@@ -3516,7 +3524,7 @@ sub doSearch
 	{
 		print DEBUG "-!!!- TAGLIST=".join('|',@{$tagSearch})."=\n"  if ($debug);
 		$srchstr = $srchTextVar  if ($newsearch);
-		eval { $replstr = $replText->get }  if ($newsearch);  #PRODUCES ERROR SOMETIMES W/O EVEL?!?!?!
+		eval { $replstr = $replText->get }  if ($newsearch);  #PRODUCES ERROR SOMETIMES W/O EVAL?!?!?!
 		if (Exists($xpopup))
 		{
 			$MainWin->focus()  if ($Steppin);
@@ -3548,7 +3556,16 @@ sub doSearch
 	}
 	else
 	{
-		my ($l) = length($srchstr) || 0;
+		my $l = length($srchstr) || 0;
+		if ($srchopts eq '-regexp')
+		{
+			my $inTags = join('|', $whichTextWidget->tagNames('insert - 1 char'));
+			if ($inTags =~ /(foundme\d+)/o) {
+				my $foundmetag = $1;
+				$whichTextWidget->markSet('insert',$whichTextWidget->index("${foundmetag}.first"));
+				$l = 1;
+			}
+		}
 		$srchpos = $whichTextWidget->index("insert - $l char")  if ($l > 0);
 		if (!@searchTagList || !$searchTagList[0])
 		{
@@ -3606,8 +3623,10 @@ sub doSearch
 				{
 					$chgstr =~ s/\Q$srchstr\E/$replstrx/egs;
 				}
+				&beginUndoBlock($whichTextWidget);
 				$whichTextWidget->delete('foundme.first',"foundme.last$hasEOL");
 				$whichTextWidget->insert('insert',$chgstr);
+				&endUndoBlock($whichTextWidget);
 				$whichTextWidget->tagDelete('foundme');
 				$lnoffset = length($chgstr);
 				++$tagcnt;
@@ -4384,8 +4403,8 @@ print STDERR "-10- NOT whole thing, start=$selstart, end=$selend, replstr=$repls
 	{
 		eval { $textScrolled[$activeWindow]->blockHighlighting(1); };
 	}
-	&beginUndoBlock($whichTextWidget);
-$textScrolled[$activeWindow]->markSet('_prev','insert');
+#RATHER NOT DO WHOLE THING!:	&beginUndoBlock($whichTextWidget);
+	$textScrolled[$activeWindow]->markSet('_prev','insert');
 print STDERR "--srchstr WAS=$srchstr=\n"  if ($debug);
 	#NOTE:  TO DELETE ENTIRE LINES THAT CONTAIN SEARCH-STR, SPECIFY LIKE:
 	#".+PATTERN\n", REPLACE="``", AND SELECT "REGULAR-EXPRESSION!:
@@ -4433,9 +4452,11 @@ print STDERR "--NOCASE: CHGSTR NOW=$chgstr= FM=$srchstr= TO=$replstrx=\n"  if ($
 print STDERR "--CASE: CHGSTR NOW=$chgstr= FM=$srchstr= TO=$replstrx=\n"  if ($debug);
 			}
 		}
+		&beginUndoBlock($whichTextWidget);
 		$whichTextWidget->delete('foundme.first',"foundme.last$hasEOL")  unless ($v);
 		my $prevcsr = $whichTextWidget->index('insert');
 		$whichTextWidget->insert('insert',$chgstr)  unless ($v);
+		&endUndoBlock($whichTextWidget);
 		#JWT:NOTE, SOME TEXTWIDGETS LEAVE THE INSERT CURSOR AT THE BEGINNING OF WHAT WAS INSERTED, SO COMPENSATE:
 		if (!$v && $whichTextWidget->compare($prevcsr,'==',$whichTextWidget->index('insert'))) {
 			$srchpos += $lnoffset;
@@ -4452,7 +4473,7 @@ print STDERR "w:INFINITE LOOP AVOIDED (srchpos increased by=$lnoffset= to=$srchp
 				-foreground     => 'black');
 		$srchpos = $whichTextWidget->index("$srchpos + $lnoffset char");
 	}
-	&endUndoBlock($whichTextWidget);
+#RATHER NOT DO WHOLE THING!:	&endUndoBlock($whichTextWidget);
 	if ($editor =~ /TextHighlight/o || $viewer =~ /TextHighlight/o)
 	{
 		eval { $textScrolled[$activeWindow]->blockHighlighting(0); };
@@ -5396,11 +5417,11 @@ sub beginUndoBlock
 
 	if ($textsubwidget =~ /supertext/io)   #ADDED 20080411 TO BLOCK CHANGES FOR UNDO.
 	{
-		eval { $whichTextWidget->_beginUndoBlock };
+		eval { $whichTextWidget->_BeginUndoBlock };
 	}
 	else
 	{
-		eval { $whichTextWidget->addGlobStart };
+		eval { $whichTextWidget->beginUndoBlock };
 	}
 }
 
@@ -5410,11 +5431,11 @@ sub endUndoBlock
 
 	if ($textsubwidget =~ /supertext/io)   #ADDED 20080411 TO BLOCK CHANGES FOR UNDO.
 	{
-		eval { $whichTextWidget->_endUndoBlock };
+		eval { $whichTextWidget->_EndUndoBlock };
 	}
 	else
 	{
-		eval { $whichTextWidget->addGlobEnd };
+		eval { $whichTextWidget->endUndoBlock };
 	}
 }
 

@@ -587,7 +587,7 @@ sub perlFn2
 		}
 	};
 
-	&beginUndoPerlBlock($textScrolled[$activeWindow])  unless ($which == 4 || $which == 8);
+	&beginUndoBlock($textScrolled[$activeWindow])  unless ($which == 4 || $which == 8);
 	if ($which == 1)        #BLOCK
 	{
 		$insstr = '';
@@ -705,7 +705,7 @@ sub perlFn2
 	{
 		&fixTabs(2,$tabspacing||3);
 	}
-	&endUndoPerlBlock($textScrolled[$activeWindow])  unless ($which == 4 || $which == 8);
+	&endUndoBlock($textScrolled[$activeWindow])  unless ($which == 4 || $which == 8);
 }
 
 sub shebang
@@ -759,7 +759,7 @@ sub reallign
 	}
 	my $hereend;
 
-	&beginUndoPerlBlock($textScrolled[$activeWindow]);
+	&beginUndoBlock($textScrolled[$activeWindow]);
 	$current_indent = $intext;
 	for (my $i=0;$i<=$#lines;$i++)
 	{
@@ -921,7 +921,7 @@ $textScrolled[$activeWindow]->markSet('selstart',$selstart);
 $textScrolled[$activeWindow]->markSet('selend',$selend);
 eval { $textScrolled[$activeWindow]->tagAdd('sel', 'selstart', 'selend'); };
 	$textScrolled[$activeWindow]->markSet('insert',$curposn);
-	&endUndoPerlBlock($textScrolled[$activeWindow]);
+	&endUndoBlock($textScrolled[$activeWindow]);
 	$statusLabel->configure(-text=>"..Realligned.");
 }
 
@@ -1058,47 +1058,24 @@ sub commentFn
 		$clipboard .= "\n"  unless ($clipboard =~ /\n$/so);
 		$clipboard .= "\n=cut\n";
 	}
+	&beginUndoBlock($textScrolled[$activeWindow]);
 	$textScrolled[$activeWindow]->delete('sel.first linestart - 1 char','selend');
 	$textScrolled[$activeWindow]->insert('insert',$clipboard);
+	&endUndoBlock($textScrolled[$activeWindow]);
 	$textScrolled[$activeWindow]->tagAdd('sel','selstart + 2 char','selend + 1 char');
 	$textScrolled[$activeWindow]->markSet('insert','selstart + 2 char');
 }
 
 sub findFns
 {
-	$srchTextVar = ($cmdfile[$activeWindow] =~ /\.(?:js|ht\w+)$/io)
+	$srchstr = $srchTextVar = ($cmdfile{$activeTab}[$activeWindow] =~ /\.js$/io)
 			? '^function\s+\w+' : '^sub\s+\w+';
-#print "-findFns: srch=$srchTextVar= cmdfile($activeWindow)=$cmdfile[$activeWindow]=\n";
+	$srchstr = $srchTextVar = 'PROCEDURE '
+		if ($cmdfile{$activeTab}[$activeWindow] =~ /\.mod$/io);
+
+print "-findFns: srch=$srchTextVar= cmdfile($activeTab/$activeWindow)=$cmdfile{$activeTab}[$activeWindow]=\n";
 	$srchopts = '-regexp';
 	&GlobalSrchRep($whichTextWidget, 1);
-}
-
-sub beginUndoPerlBlock
-{
-	my $whichTextWidget = shift;
-
-	if ($textsubwidget =~ /supertext/io)   #ADDED 20080411 TO BLOCK CHANGES FOR UNDO.
-	{
-		eval { $whichTextWidget->_BeginUndoBlock };
-	}
-	else
-	{
-		eval { $whichTextWidget->addGlobStart };
-	}
-}
-
-sub endUndoPerlBlock
-{
-	my $whichTextWidget = shift;
-
-	if ($textsubwidget =~ /supertext/io)   #ADDED 20080411 TO BLOCK CHANGES FOR UNDO.
-	{
-		eval { $whichTextWidget->_EndUndoBlock };
-	}
-	else
-	{
-		eval { $whichTextWidget->addGlobEnd };
-	}
 }
 
 1

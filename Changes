@@ -275,8 +275,16 @@ v6.43   24/07/16
 		- JCutCopyPaste.pl - Fix minor issues with selecting proper cut buffer.
 		- BindMouseWheel.pl - Removed obsolete main-window bindings that 
 		assume the main window is always named "$MainWin".
-6.44
+6.44		24/07/26
 		- Add corresponding "View This" in the Edit menu for the editor state 
 		(The viewer state has the mirror of this labeled "Edit This").  This 
 		will open a Viewer window of the file in the tab being edited in it's 
 		previously-saved state.
+6.45		24/08/01
+		- Fix failure to group together delete/insert combinations into a 
+		single Undo step when undoing changes.  Examples of these are search/
+		replace operations, block commenting, construct block insertions, etc.
+		- Fix bug that prevented searching backwards in some regex-based 
+		search strings including Perl's Highlight Functins menu option.
+		- Fix the "d-bug" search/replace button's and the "Perl" menu's 
+		"Highlight Functions" option's language-specific aspects.
