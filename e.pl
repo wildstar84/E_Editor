@@ -354,7 +354,7 @@ use Tk::JFileDialog;
 
 #-----------------------
 
-$vsn = '6.45';
+$vsn = '6.46';
 
 $editmode = 'Edit';
 if ($v)
@@ -4459,11 +4459,11 @@ print STDERR "--CASE: CHGSTR NOW=$chgstr= FM=$srchstr= TO=$replstrx=\n"  if ($de
 		&endUndoBlock($whichTextWidget);
 		#JWT:NOTE, SOME TEXTWIDGETS LEAVE THE INSERT CURSOR AT THE BEGINNING OF WHAT WAS INSERTED, SO COMPENSATE:
 		if (!$v && $whichTextWidget->compare($prevcsr,'==',$whichTextWidget->index('insert'))) {
-			$srchpos += $lnoffset;
+			$srchpos + $whichTextWidget->index("$srchpos + $lnoffset char");;
 print STDERR "w:INFINITE LOOP AVOIDED (srchpos increased by=$lnoffset= to=$srchpos=\n";
 		}
 		$whichTextWidget->tagDelete('foundme');
-		$lnoffset = length($chgstr);
+		$lnoffset = length($chgstr) || 1;
 		++$tagcnt;
 		$whichTextWidget->tagAdd("foundme$tagcnt", $srchpos, "$srchpos + $lnoffset char");
 		$whichTextWidget->tagConfigure("foundme$tagcnt",

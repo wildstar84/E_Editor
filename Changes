@@ -288,3 +288,7 @@ v6.43   24/07/16
 		search strings including Perl's Highlight Functins menu option.
 		- Fix the "d-bug" search/replace button's and the "Perl" menu's 
 		"Highlight Functions" option's language-specific aspects.
+6.46		24/08/10
+		- Fix global search/replace failure (only does 1st one) if search 
+		pattern is a regular expression string that is shorter than the 
+		string it matches.
