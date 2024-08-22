@@ -292,3 +292,7 @@ v6.43   24/07/16
 		- Fix global search/replace failure (only does 1st one) if search 
 		pattern is a regular expression string that is shorter than the 
 		string it matches.
+6.47		24/08/22
+		- Add support for new Tk::JFileDialog v2.40+ "-PreserveSelection" 
+		feature (if using that version or higher).
+		- Remove some dead / depreciated / unused code.

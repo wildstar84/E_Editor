@@ -354,7 +354,7 @@ use Tk::JFileDialog;
 
 #-----------------------
 
-$vsn = '6.46';
+$vsn = '6.47';
 
 $editmode = 'Edit';
 if ($v)
@@ -1171,13 +1171,6 @@ $exitButton = $mFrame->Button(
  		-command => [\&exitFn]);
 $exitButton->pack(@btnPackOps);
 
-#t $savexButton = $mFrame->Button(
-#t 		-text => 'Exit',
-#t 		-underline => 1,
-#t 		@btnOps,
-#t 		-command => [\&savexFn]);
-#t $savexButton->pack(@btnPackOps);
-
 $bottomFrame->pack(
 		-side => 'bottom',
 		-fill	=> 'both',
@@ -1413,7 +1406,6 @@ if ($v)
 	$cutButton->configure(-state => 'disabled');
 	$pasteButton->configure(-state => 'disabled');
 	$saveButton->configure(-state => 'disabled');
-#t	$savexButton->configure(-state => 'disabled');
 	$MainWin->bind('<Escape>' => \&exitFn);
 	#$MainWin->bind('<Alt-c>' => 'NoOp');
 	#$MainWin->bind('<Alt-c>' => sub {&doCopy; shift->break;});  #NEEDED SINCE COLORS REBINDS 
@@ -2047,7 +2039,6 @@ if ($bummer && $w32dnd)
 		});
 		$textScrolled[$i]->bind('<Alt-comma>' => sub { &doSearch(0,0) });
 		$textScrolled[$i]->bind('<Alt-period>' => sub { &doSearch(0,1) });
-#t		$textScrolled[$i]->bind('<Alt-a>' => sub { &doSearch(0) });
 		$textScrolled[$i]->bind('<Control-g>' => sub { &doSearch(0,1) });
 		my $cls = ref($tw);
  		$tw->bind($cls, '<Control-Key-'.scalar(@tablist).'>' => sub{})
@@ -2403,6 +2394,8 @@ sub saveSelected
 			-DestroyOnHide => $Steppin,
 			-Create => 1);
 
+	$fileDialog->configure('-PreserveSelection' => 1)  if ($Tk::JFileDialog::VERSION >= 2.4);
+
 	my $fid = $fileDialog->Show;
 	$startpath = $fileDialog->getLastPath();
 	$histpathbutton = $fileDialog->getHistUsePathButton();
@@ -2655,6 +2648,9 @@ sub getcmdfile          #PROMPT USER FOR NAME OF DESIRED COMMAND FILE.  RETURNS 
 			-HistUsePathButton => $histpathbutton,
 			-DestroyOnHide => $Steppin,
 			-Create => 1);
+
+	$fileDialog->configure('-PreserveSelection' => 1)  if ($Tk::JFileDialog::VERSION >= 2.4);
+
 	$intext = $fileDialog->Show;
 	chomp($intext);
 	&fixAfterStep()  if ($Steppin);   #TRYIN TO MAKE OUR STUPID W/M RESTORE FOCUS?!?!?! :(
@@ -2956,6 +2952,8 @@ sub appendfile
 			-HistUsePathButton => $histpathbutton,
 			-DestroyOnHide => $Steppin,
 			-Create => 0);
+
+	$fileDialog->configure('-PreserveSelection' => 1)  if ($Tk::JFileDialog::VERSION >= 2.4);
 
 	$fid = $fileDialog->Show;
 	$startpath = $fileDialog->getLastPath();
@@ -3794,61 +3792,6 @@ sub gotoErr
 	$errline =~ s/\D//go;
 	&gotoMark($textScrolled[$activeWindow], $errline);
 }
-
-sub doSaveXXXX
-{
-	my ($mytitle) = "File to save results:";
-	my ($create) = 1;
-	my ($fileDialog) = $MainWin->JFileDialog(
-			-Title =>$mytitle,
-			-Path => $startpath,
-			-History => (defined $histmax) ? $histmax : 20,
-			-HistFile => $histFile,
-			-PathFile => $pathFile,
-			-HistDeleteOk => 1,
-			-HistUsePath => (defined $histpath) ? $histpath : -1,
-			-HistUsePathButton => $histpathbutton,
-			-DestroyOnHide => $Steppin,
-			-Create => $create);
-
-	my ($myfile) = $fileDialog->Show(-Horiz=>0);
-	&fixAfterStep()  if ($Steppin);
-   	$startpath = $fileDialog->getLastPath();
-	$histpathbutton = $fileDialog->getHistUsePathButton();
-	if ($myfile =~ /\S/o && open(OUTFID, ">$myfile"))
-	{
-		binmode OUTFID;
-		$_ = $text2Scrolled->get('0.0','end');
-		chomp;
-		s/\r\n/\n/go;
-		if ($opsys eq 'DOS')
-		{
-			s/\n/\r\n/go;
-	  	}
-		elsif ($opsys eq 'Mac')
-		{
-			s/\n/\r/go;
-		}
-		print OUTFID;
-		close OUTFID;
-		&setStatus("..Results saved to file: \"$myfile\".");
-		return (0);
-	}
-	else
-	{
-		$errDialog->configure(
-				-text => "doSave: Could not save \"$myfile\" ($!)!");
-		$errDialog->Show($showgrabopt);
-		&setStatus("doSave:COULD NOT SAVE TO \"$myfile\"!");
-		print "e:doSave:COULD NOT SAVE RESULTS TO \"$myfile\"!\n";
-		return (1);
-	}
-}
-
-#t sub savexFn
-#t {
-#t 	&exitFn($Yes);
-#t }
 
 sub clearMarks
 {
