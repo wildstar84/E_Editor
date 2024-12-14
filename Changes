@@ -296,3 +296,11 @@ v6.43   24/07/16
 		- Add support for new Tk::JFileDialog v2.40+ "-PreserveSelection" 
 		feature (if using that version or higher).
 		- Remove some dead / depreciated / unused code.
+6.48    -NOT RELEASED-
+6.49		24/12/14
+		- The [Paste] button in the Search dialog should first attempt to 
+		paste the PRIMARY selection, then fall back to CLIPBOARD content if 
+		no PRIMARY selection (prev. was not always clearly defined & thus 
+		not working consistantly).
+		- (Revert) Do not set the new JFileDialog "-PreserveSelection", as it 
+		does not work properly in context as used in E Editor.

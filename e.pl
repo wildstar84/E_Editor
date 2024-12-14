@@ -354,7 +354,7 @@ use Tk::JFileDialog;
 
 #-----------------------
 
-$vsn = '6.47';
+$vsn = '6.49';
 
 $editmode = 'Edit';
 if ($v)
@@ -2394,8 +2394,6 @@ sub saveSelected
 			-DestroyOnHide => $Steppin,
 			-Create => 1);
 
-	$fileDialog->configure('-PreserveSelection' => 1)  if ($Tk::JFileDialog::VERSION >= 2.4);
-
 	my $fid = $fileDialog->Show;
 	$startpath = $fileDialog->getLastPath();
 	$histpathbutton = $fileDialog->getHistUsePathButton();
@@ -2648,9 +2646,6 @@ sub getcmdfile          #PROMPT USER FOR NAME OF DESIRED COMMAND FILE.  RETURNS 
 			-HistUsePathButton => $histpathbutton,
 			-DestroyOnHide => $Steppin,
 			-Create => 1);
-
-	$fileDialog->configure('-PreserveSelection' => 1)  if ($Tk::JFileDialog::VERSION >= 2.4);
-
 	$intext = $fileDialog->Show;
 	chomp($intext);
 	&fixAfterStep()  if ($Steppin);   #TRYIN TO MAKE OUR STUPID W/M RESTORE FOCUS?!?!?! :(
@@ -2953,8 +2948,6 @@ sub appendfile
 			-DestroyOnHide => $Steppin,
 			-Create => 0);
 
-	$fileDialog->configure('-PreserveSelection' => 1)  if ($Tk::JFileDialog::VERSION >= 2.4);
-
 	$fid = $fileDialog->Show;
 	$startpath = $fileDialog->getLastPath();
 	$histpathbutton = $fileDialog->getHistUsePathButton();
@@ -3175,28 +3168,13 @@ sub newSearch
 	eval { $whichTextWidget->tagDelete('savesel'); };
 	eval { $whichTextWidget->tagAdd('savesel', 'sel.first', 'sel.last'); };
 	$srchTextVar = '';
-	my ($clipboard);
+	my $primary = '';
+	my $clipboard = '';
 
-	eval
-	{
-		$clipboard = $MainWin->SelectionGet(-selection => 'PRIMARY');
-	}
-	;
-	unless (defined($clipboard))
-	{
-		eval
-		{
-			$clipboard = $whichTextWidget->get('foundme.first','foundme.last');
-		}
-	}
-	unless (defined($clipboard) && $clipboard =~ /\S/o)
-	{
-		eval
-		{
-			$clipboard = $MainWin->SelectionGet(-selection => 'CLIPBOARD');
-		}
-		;
-	}
+	eval { $primary = $MainWin->SelectionGet(-selection => 'PRIMARY'); };
+	eval { $primary = $whichTextWidget->get('foundme.first','foundme.last') }
+			unless (defined($primary) && length($primary) > 0);
+	eval { $clipboard = $MainWin->SelectionGet(-selection => 'CLIPBOARD'); };
 
 	$startattop = 1  if ($newsearch);
 	if (Exists($xpopup))
@@ -3365,12 +3343,14 @@ sub newSearch
 			-text => 'Paste',
 			-underline => 0,
 			-command => sub
-	{
-		eval {$curTextWidget->insert('insert',$clipboard); $whichTextWidget->tagDelete('savesel') }  if (defined($clipboard));
-		eval {$activewidget->tagRemove('sel','0.0','end');};
-	}
+		{
+			eval { $curTextWidget->insert('insert',$primary); $whichTextWidget->tagDelete('savesel') }
+					if (defined($primary) && length($primary) > 0);
+			eval { $activewidget->tagRemove('sel','0.0','end');};
+		}
 	);
-	$pasteButton->configure(-state => 'disabled')  unless (defined($clipboard));
+	$pasteButton->configure(-state => 'disabled')
+			unless (defined($primary) && length($primary) > 0);
 
 	$pasteButton->pack(-side=>'left', -expand=>1, -pady => 6);
 	my $cbpasteButton = $btnframe->Button(
@@ -3378,11 +3358,12 @@ sub newSearch
 			-text => 'CB Paste',
 			-underline => 1,
 			-command => sub
-	{
-		eval {$curTextWidget->insert('insert',$MainWin->SelectionGet(-selection => 'CLIPBOARD'));};
-	}
+		{
+			eval {$curTextWidget->insert('insert',$clipboard);};
+		}
 	);
-	$cbpasteButton->configure(-state => 'disabled')  unless (defined($clipboard));
+	$cbpasteButton->configure(-state => 'disabled')
+			unless (defined($clipboard) && length($clipboard) > 0);
 
 	$cbpasteButton->pack(-side=>'left', -expand=>1, -pady => 6);
 
