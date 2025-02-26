@@ -1,3 +1,7 @@
+#NOTE:  e.src.pl NOW GOES IN $systmp (default /tmp/ram/ - a ram disk).
+#FOR SSD-BASED SYSTEMS, $systemp SHOULD BE ON A RAMDISK TO AVOID CONSTANTLY
+#WRITING SHORT-LIVED TEMP. FILES TO AN SSD DRIVE!:
+
 $perlMenubtn = $w_menu->Menubutton(
 	-text => 'Perl',
 	-underline => 0,
@@ -98,7 +102,7 @@ if (defined($v))
 
 sub perlFn
 {
-	my ($runit) = shift;
+	my ($runit) = shift;  #(0=check, 1=run, 2=eval)
 
 	$abortit = 0;
 	$closeit = 0;
@@ -115,37 +119,34 @@ sub perlFn
 			$_ = $wholething;
 		};
 		return 0  unless (defined($wholething));
-		my ($result) = eval $wholething  unless (&writedata("$hometmp/e.src.tmp"));
-		if (open (TEMPFID,">$hometmp/e.out.tmp"))
+		my ($result) = eval $wholething  unless (&writedata("$systmp/e.src.tmp"));
+		if (open (TEMPFID,">$systmp/e.out.tmp"))
 		{
 			print TEMPFID "$result\n";
 			print TEMPFID "\nEval returned error:  $@!\n"  unless ($@ eq '');
 			close TEMPFID;
-			`chmod 777 $hometmp/e.out.tmp`;
 		}
 	}
 	elsif ($runit)
 	{
 		&gettext("Optional command-line arguments:",40,'t');
 		return  if ($intext eq  '*cancel*');
-		chmod(0777,"$hometmp/e.src.tmp");
 		$_ = '';
-		unless (&writedata("$hometmp/e.src.tmp"))
+		unless (&writedata("$systmp/e.src.tmp"))
 		{
 			#sleep(4);
 			$MainWin->Busy;
 			if ($bummer)
 			{
 				#$_ = "perl c:\\tmp\\e.src.tmp $intext >c:\\tmp\\e.out.tmp";
-				$_ = "c:\\perl\\bin\\perl \"$hometmp\\e.src.tmp\" $intext >\"$hometmp\\e.out.tmp\" 2>&1";
+				$_ = "c:\\perl\\bin\\perl \"$systmp\\e.src.tmp\" $intext >\"$hometmp\\e.out.tmp\" 2>&1";
 #print "-RUNNING CMD=$_=\n";
 				system $_;
 #print "-DID CMD!\n";
 			}
 			else
 			{
-				system "$hometmp/e.src.tmp $intext >$hometmp/e.out.tmp 2>&1 &";
-				`chmod 777 $hometmp/e.out.tmp`;
+				system "perl $systmp/e.src.tmp $intext >$systmp/e.out.tmp 2>&1 &";
 				#sleep 3;
 				#(@childpid) = `ps -ef|grep "e.src.tmp"`;
 				(@childpid) = `ps ef|grep "e.src.tmp"`;
@@ -175,29 +176,28 @@ GOTCHILD: ;
 	else
 	{
 		$MainWin->Busy;
-		#system "perl -c <$hometmp/e.src.tmp >$hometmp/e.out.tmp 2>&1 "  unless (&writedata("$hometmp/e.src.tmp"));
+		#system "perl -c <$systmp/e.src.tmp >$systmp/e.out.tmp 2>&1 "  unless (&writedata("$systmp/e.src.tmp"));
 		$_ = '';
-		unless (&writedata("$hometmp/e.src.tmp"))
+		unless (&writedata("$systmp/e.src.tmp"))
 		{
 			#sleep(2);
-			#system "perl -c <$hometmp/e.src.tmp >$hometmp/e.out.tmp 2>&1 ";
+			#system "perl -c <$systmp/e.src.tmp >$systmp/e.out.tmp 2>&1 ";
 			#CHANGED TO NEXT LINE 20010514 TO FIX SAVE DELAY SYMPTOMS.
 			if ($bummer)
 			{
 				#$_ = "perl -c c:\\tmp\\e.src.tmp 2>c:\\tmp\\e.out.tmp";
-				$_ = "c:\\perl\\bin\\perl -c \"$hometmp\\e.src.tmp\" 2>\"$hometmp\\e.out.tmp\"";
+				$_ = "c:\\perl\\bin\\perl -c \"$systmp\\e.src.tmp\" 2>\"$hometmp\\e.out.tmp\"";
 				if (`TYPE c:\\tmp\\e.out.tmp` =~ /\"\-T\" is on the \#\! line/o)
 				{
-					$_ = "c:\\perl\\bin\\perl -T -c \"$hometmp\\e.src.tmp\" 2>\"$hometmp\\e.out.tmp\"";
+					$_ = "c:\\perl\\bin\\perl -T -c \"$systmp\\e.src.tmp\" 2>\"$hometmp\\e.out.tmp\"";
 				}
 			}
 			else
 			{
-				$_ = "perl -c <$hometmp/e.src.tmp >$hometmp/e.out.tmp 2>&1 ";
-				`chmod 777 $hometmp/e.out.tmp`;
-				if (`cat /home/turnerjw/tmp/e.out.tmp` =~ /\"\-T\" is on the \#\! line/o)
+				$_ = "perl -c <$systmp/e.src.tmp >$systmp/e.out.tmp 2>&1 ";
+				if (`cat $systmp/e.out.tmp` =~ /\"\-T\" is on the \#\! line/o)
 				{
-					$_ = "perl -T -c <$hometmp/e.src.tmp >$hometmp/e.out.tmp 2>&1 ";
+					$_ = "perl -T -c <$systmp/e.src.tmp >$systmp/e.out.tmp 2>&1 ";
 				}
 			}
 #print "-GRAVING COMPILE CMD=$_=\n";
@@ -370,7 +370,7 @@ $MainWin->raise();
 		my ($errline) = undef;
 #print "-opening2 tempfid!\n";
 		$xpopup2->update;
-		if (open(TEMPFID,"<$hometmp/e.out.tmp"))
+		if (open(TEMPFID,"<$systmp/e.out.tmp"))
 		{
 #print "-opened2 tempfid!\n";
 			while (<TEMPFID>)
@@ -413,7 +413,7 @@ $MainWin->raise();
 			my ($errline) = undef;
 #print "-opening102 tempfid!\n";
 			$xpopup2->update;
-			if (open(TEMPFID,"<$hometmp/e.out.tmp"))
+			if (open(TEMPFID,"<$systmp/e.out.tmp"))
 			{
 ++$abortit;
 #print "-opened2 tempfid!\n";
@@ -745,16 +745,16 @@ sub reallign
 
 	my (@lines) = split(/\n/o, $wholething);
 
-	if (open (TEMPFID,">$hometmp/e.reformat.tmp"))
+	if (open (TEMPFID,">$systmp/e.reformat.tmp"))
 	{
 		print TEMPFID '#LINES: '.$selstart.' - '.$selend."\n";
 		print TEMPFID $wholething;
 		close TEMPFID;
-		`chmod 777 $hometmp/e.reformat.tmp`;
+		`chmod 777 $systmp/e.reformat.tmp`;
 	}
 	else
 	{
-		$statusLabel->configure(-text=>"Could not reformat -- $hometmp/e.reformat.tmp unwritable!");
+		$statusLabel->configure(-text=>"Could not reformat -- $systmp/e.reformat.tmp unwritable!");
 		return (1);
 	}
 	my $hereend;
@@ -912,9 +912,9 @@ sub reallign
 				"${padpre}$args[2]$args[3]$padbefore\{$padafter"
 		/egs;
 	}
-	$wholething =~ s|\x02\^2jSpR1tE\x02|\{|gso;   #UNPROTECT BRACES IN QUOTES.
-	$wholething =~ s|\x02\^3jSpR1tE\x02|\}|gso;   #UNPROTECT BRACES IN QUOTES.
-	$wholething =~ s|\x02\^4jSpR1tE\x02|\;|gso;   #UNPROTECT SEMICOLONS IN QUOTES.
+	$wholething =~ s/\x02\^2jSpR1tE\x02/\{/gso;   #UNPROTECT BRACES IN QUOTES.
+	$wholething =~ s/\x02\^3jSpR1tE\x02/\}/gso;   #UNPROTECT BRACES IN QUOTES.
+	$wholething =~ s/\x02\^4jSpR1tE\x02/\;/gso;   #UNPROTECT SEMICOLONS IN QUOTES.
 
 	$textScrolled[$activeWindow]->insert('insert',$wholething);
 $textScrolled[$activeWindow]->markSet('selstart',$selstart);
@@ -976,7 +976,7 @@ sub FetchAbortedOutput
 	my ($errline) = undef;
 #print "-opening2 tempfid!\n";
 	$xpopup2->update;
-	if (open(TEMPFID,"<$hometmp/e.out.tmp"))
+	if (open(TEMPFID,"<$systmp/e.out.tmp"))
 	{
 ++$abortit;
 #print "-opened2 tempfid!\n";

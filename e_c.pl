@@ -1,3 +1,7 @@
+#NOTE:  e.src.c NOW GOES IN $systmp (default /tmp/ram/ - a ram disk).
+#FOR SSD-BASED SYSTEMS, $systemp SHOULD BE ON A RAMDISK TO AVOID CONSTANTLY
+#WRITING SHORT-LIVED TEMP. FILES TO AN SSD DRIVE!:
+
 $perlMenubtn = $w_menu->Menubutton(
 	-text => 'C',
 	-underline => 0,
@@ -28,14 +32,14 @@ if (defined($v))
 
 sub c_Fn
 {
-	my ($runit) = shift;
+	my ($runit) = shift;  #(0=check, 1=run)
 
-	`rm $hometmp/*.o`;
+	`rm $systmp/*.o`;
 	`rm a.out`;
-	`echo "" >$hometmp/e.out.tmp`;
+	`echo "" >$systmp/e.out.tmp`;
 	$MainWin->Busy;
 	$_ = '';
-	system "gcc $ENV{C_OPTIONS} $hometmp/e.src.c  >$hometmp/e.out.tmp 2>&1"  unless (&writedata("$hometmp/e.src.c"));
+	system "gcc $ENV{C_OPTIONS} $systmp/e.src.c  >$systmp/e.out.tmp 2>&1"  unless (&writedata("$systmp/e.src.c"));
 
 	$compileResult = $?;
 #print "-rununit=$runit= err=$compileResult=\n";
@@ -44,7 +48,7 @@ sub c_Fn
 #print "-2rununit=$runit=\n";
 		if (-e 'a.out')
 		{
-			system "a.out >$hometmp/e.out.tmp 2>&1 &";
+			system "a.out >$systmp/e.out.tmp 2>&1 &";
 			(@childpid) = `ps -ef|grep e.src.tmp`;
 			$childpid = $childpid[1];
 			$childpid =~ s/\D+(\d+)\s+\d+\s+\d+.*$/$1/;
@@ -53,7 +57,7 @@ sub c_Fn
 	#elsif (!compileResult)
 	#{
 #print "-4: cr=$compileResult=\n";
-		`echo "Syntax OK!\n" >>$hometmp/e.out.tmp`  unless ($runit || $compileResult);
+		`echo "Syntax OK!\n" >>$systmp/e.out.tmp`  unless ($runit || $compileResult);
 	#}
 	$xpopup2->destroy  if (Exists($xpopup2));
 	$xpopup2 = $MainWin->Toplevel;
@@ -153,7 +157,7 @@ sub c_Fn
 
 	$xpopup2->bind('<Escape>'   => [$okButton	=> Invoke]);
 	$okButton->focus;
-	if (open(TEMPFID,"$hometmp/e.out.tmp"))
+	if (open(TEMPFID,"$systmp/e.out.tmp"))
 	{
 		while (<TEMPFID>)
 		{

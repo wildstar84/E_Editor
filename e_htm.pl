@@ -62,6 +62,11 @@ sub perlFn
 	{
 		$_ = '';
 		my $browser;   #ADDED 20021007 TO ALLOW USER TO SELECT BROWSER.
+		unless (-f "$webtmp/e.src.htm")
+		{
+			`touch "$webtmp/e.src.htm"`;
+			`chmod 666 "$webtmp/e.src.htm"`;
+		}
 		unless (&writedata("$webtmp/e.src.htm"))
 		{
 			if (open(T, "<$ENV{HOME}/.myebrowser"))
@@ -329,7 +334,7 @@ print STDERR "-!!!- END UNDOBLOCK!\n"  if ($debug);
 	$xpopup2->bind('<Escape>'   => [$okButton	=> Invoke]);
 	$okButton->focus;
 	my ($errline) = undef;
-	if (open(TEMPFID,"$hometmp/e.out.tmp"))
+	if (open(TEMPFID,"$systmp/e.out.tmp"))
 	{
 		while (<TEMPFID>)
 		{
@@ -441,16 +446,16 @@ sub reallign
 	}
 	my (@lines) = split(/\n/o, $wholething);
 
-	if (open (TEMPFID,">$hometmp/e.reformat.tmp"))
+	if (open (TEMPFID,">$systmp/e.reformat.tmp"))
 	{
 		print TEMPFID '#LINES: '.$selstart.' - '.$selend."\n";
 		print TEMPFID $wholething;
 		close TEMPFID;
-		`chmod 777 $hometmp/e.reformat.tmp`;
+		`chmod 777 $systmp/e.reformat.tmp`;
 	}
 	else
 	{
-		$statusLabel->configure(-text=>"Could not reformat -- $hometmp/e.reformat.tmp unwritable!");
+		$statusLabel->configure(-text=>"Could not reformat -- $systmp/e.reformat.tmp unwritable!");
 		return (1);
 	}
 	my $hereend;
