@@ -296,7 +296,7 @@ v6.43   24/07/16
 		- Add support for new Tk::JFileDialog v2.40+ "-PreserveSelection" 
 		feature (if using that version or higher).
 		- Remove some dead / depreciated / unused code.
-6.48    -NOT RELEASED-
+6.48		-NOT RELEASED-
 6.49		24/12/14
 		- The [Paste] button in the Search dialog should first attempt to 
 		paste the PRIMARY selection, then fall back to CLIPBOARD content if 
@@ -304,3 +304,32 @@ v6.43   24/07/16
 		not working consistantly).
 		- (Revert) Do not set the new JFileDialog "-PreserveSelection", as it 
 		does not work properly in context as used in E Editor.
+6.5*		-NOT RELEASED-
+6.60		25/02/25
+		- Default $systmp (system temporary) directory to /tmp/ram if that 
+		is a valid directory, otherwise to the previous default of /tmp.  This 
+		is to allow for it to be a ramdisk, particularly for users who use an 
+		SSD hard drive in order to reduce writes for very short-term temporary 
+		files.  Also change the location of e.src.tmp (for test-compiling) and 
+		e.out.tmp to use $systmp instead of $hometmp also for this reason.  
+		- Fix window-resizing issues (bug) when splitting or unsplitting 
+		editor screen.  This has been a long-standing bug that seemed to 
+		manifest somewhat randomly, and always if user had previously adjusted 
+		the size of the main window vertically.  This was extremely tricky and 
+		difficult to fix due to inconsistancies in Perl/Tk's handling of 
+		window geometry, expecially involving character/text based widgets, 
+		and also vis-a-vis Perl/Tk's own geometry and packing documentation, 
+		requiring much T&E.  Breakthrough ocurred when examining Jfm5's 
+		(similar) splitScreen() code plus adding small amt. of code to cause 
+		the initial window to come up sized for both panes even when started 
+		with only a single file (pane)!
+		- Fix another, apparently longstanding bug that often saved the file 
+		from the wrong pane when combining a split-window (containing 2 
+		separate files), by saving the file from the wrong window-pane (the 
+		correct action is to save the file in the pane being closed, not the 
+		active one, which remains open and expands to fill the closed pane's 
+		window-area).
+		- Eliminate certain redundant auto-backups to user's $hometmp 
+		directory to reduce writes to potential SSD drives.
+		- Numerous general code-cleanups and removal of long-commented out 
+		(unused) code (accumulated cruft over the years).
