@@ -333,3 +333,10 @@ v6.43   24/07/16
 		directory to reduce writes to potential SSD drives.
 		- Numerous general code-cleanups and removal of long-commented out 
 		(unused) code (accumulated cruft over the years).
+6.61		25/03/13
+		- Fix -debug to write e.dbg file to $systmp instead of hardcoded /tmp.
+		- Fix failure to save unsaved changes on [Quit] right after performing 
+		a successful compile test.
+		- Fix failure to sometimes display file name of file being edited 
+		instead of "--SELECTED TEXT--".
+		- Correct BindMouseWheel.pl to use /usr/bin/perl.

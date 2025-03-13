@@ -114,7 +114,6 @@ $pgmhome =~ s#[^/]*$##;  #SET NAME TO SQL.PL FOR ORAPERL!
 $pgmhome ||= './';
 (my $usehome = $pgmhome) =~ s#\/bin\/#\/share\/E\/#  unless ($bummer);
 $pgmhome = $usehome  if (-d $usehome);
-print DEBUG "-!!!- pgmhome=$pgmhome=\n"  if ($debug);
 $pgmhome .= '/'  unless ($pgmhome =~ m#/$#o);
 #$pgmhome = 'c:/perl/bin/'  if ($bummer && $pgmhome =~ /^\.[\/\\]$/o);
 
@@ -126,7 +125,10 @@ my $curdir;  # ||= &cwd()  unless ($nocwd);   #THIS VARIABLE ONLY USED FOR FINDI
 $curdir ||= &cwd(); 
 #IF WE LATER FIND WE NEED THE "CURRENT DIR", WE'LL NEED TO SAVE &cwd() RESULTS AGAIN!
 $debug = 1  if ($d || $debug);
-open DEBUG, ">/tmp/e.dbg"  if ($debug);
+$systmp ||= (-d '/tmp/ram') ? '/tmp/ram' : '/tmp';
+$hometmp = (-w "${homedir}tmp") ? "${homedir}tmp" : $systmp;
+$webtmp ||= $ENV{'WEBTMP'} || $systmp;
+open DEBUG, ">${systmp}/e.dbg"  if ($debug);
 if ($ARGV[0])
 {
 	(my $argPath = $ARGV[0]) =~ s#\/[^\/]+$##o;
@@ -347,7 +349,7 @@ use Tk::JFileDialog;
 
 #-----------------------
 
-$vsn = '6.60';
+$vsn = '6.61';
 
 $editmode = $v ? 'View' : 'Edit';
 
@@ -356,9 +358,6 @@ my (%scrnCnts, %saveStatus);
 my $nextTab = '1';
 our %cmdfile;
 
-$systmp ||= (-d '/tmp/ram') ? '/tmp/ram' : '/tmp';
-$hometmp = (-w "${homedir}tmp") ? "${homedir}tmp" : $systmp;
-$webtmp ||= $ENV{'WEBTMP'} || $systmp;
 $dirsep = '/';
 if ($bummer)
 {
@@ -1619,7 +1618,8 @@ sub anyChanges
 {
 	my $tab = shift || $activeTab;
 	my $window = shift || $activeWindow;
-	return 0  if ($saveStatus{$tab}[$window] =~ /(?:essfully opened file\:|saved to file\:)/o);  #WE JUST OPENED, NO CHANGES!
+	return 0  if ($saveStatus{$tab}[$window] =~ /(?:essfully opened file\:|saved to file\:)/o
+			&& $saveStatus{$tab}[$window] !~ m#\/e\.src\.tmp\"#o);  #WE JUST OPENED, NO CHANGES!
 	return 1  if (length($textScrolled[$window]->get('1.0','3.0')) > 1);  #WE HAVE DATA, (CHANGES)!
 	return 0;  #WE HAVE NO DATA (EMPTY WINDOW - NO CHANGES)
 }
@@ -2931,7 +2931,7 @@ print DEBUG "-chose (otherwise) $langModule!\n"  if ($debug);
 	{
 		&setStatus("..Could not open file: \"$fid\" (cwd=".&cwd.")!");
 		$cmdfile{$activeTab}[$activeWindow] = $fid;
-#		$MainWin->title("$titleHeader, ${editmode}ing New File:  \"$fid\"");   #GETS OVERWRITTEN ANYWAY :(
+		$MainWin->title("$titleHeader, ${editmode}ing New File:  \"$fid\"");   #GETS OVERWRITTEN SOMETIMES.
 		return undef;
 	}
 }
