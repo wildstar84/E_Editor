@@ -340,3 +340,7 @@ v6.43   24/07/16
 		- Fix failure to sometimes display file name of file being edited 
 		instead of "--SELECTED TEXT--".
 		- Correct BindMouseWheel.pl to use /usr/bin/perl.
+6.62		25/03/17
+		- Fix broken default backup on startup (when -nb option not used).
+		Pbm. was that it was no longer backing up the opened file to 
+		$hometmp/e.<nextbackup#>.tmp!

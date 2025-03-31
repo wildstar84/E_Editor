@@ -349,7 +349,7 @@ use Tk::JFileDialog;
 
 #-----------------------
 
-$vsn = '6.61';
+$vsn = '6.62';
 
 $editmode = $v ? 'View' : 'Edit';
 
@@ -733,7 +733,7 @@ $fileMenubtn->command(
 $fileMenubtn->command(
 		-label => 'Back up',
 		-underline =>0,
-		-command => [\&backupFn]);
+		-command => [\&backupFn, 0]);
 $fileMenubtn->command(
 		-label => 'Back up (/tmp)',
 		-command => [\&SaveOnDestroy, 'U', 0]);
@@ -2906,7 +2906,12 @@ print DEBUG "-chose (otherwise) $langModule!\n"  if ($debug);
 		{
 			#$backupct = &backupFn($fid);
 #DEPRECIATED(REDUNDANT - SEE NEXT LINE):			$backupct = &backupFn($nb ? 'e.before.tmp' : 0);
-			&SaveOnDestroy('B', 1)  if ($nb);   #JWT:ADDED 20130309 TO BE SURE TO SAVE EACH FILE IN IT'S OPENED STATE
+#CHGD. TO NEXT 20250317:			&SaveOnDestroy('B', 1)  if ($nb);   #JWT:ADDED 20130309 TO BE SURE TO SAVE EACH FILE IN IT'S OPENED STATE
+			if ($nb) {
+				&SaveOnDestroy('B', 1);   #BACK UP TO $systmp/e_BTab#W#_<filename>_random#.tmp
+			} else {
+				$backupct = &backupFn(0); #BACK UP TO $hometmp/e_<nextbackup#>.tmp
+			}
 		}
 		$_ = "..Successfully opened file: \"$fid\"";
 		$_ .= (-w $fid) ? '.' : ' (READONLY).';
