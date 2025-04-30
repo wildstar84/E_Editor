@@ -344,3 +344,17 @@ v6.43   24/07/16
 		- Fix broken default backup on startup (when -nb option not used).
 		Pbm. was that it was no longer backing up the opened file to 
 		$hometmp/e.<nextbackup#>.tmp!
+6.63		-NOT RELEASED-
+		- Re-lookup/read .ini files for each tab/paine and file opened for the 
+		(2 options for now:  "tabspacing" and "notabs") for changes based on 
+		the path of the file being opened so that when editing source-files 
+		for different projects (folders), one can be sure that source-code 
+		edits will use the proper tab/spacing for that project (if that 
+		project has it's own policy.
+6.64		25/03/30
+		- Fix failure to add files opened directly, via the "Open in New Tab" 
+		& "[+Tab]" options are added to the file-dialog history (even though 
+		this method bypasses the file-select dialog box.
+		- Correct .ini file lookup order to fix some edge cases.
+		- Minor code-cleanups.
+		- Also includes v6.63 changes.

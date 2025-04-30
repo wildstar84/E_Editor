@@ -106,11 +106,12 @@ if ($bummer)
 }
 
 our $activeWindow = 0;
+our %cmdfile, %tabspacing, %notabs;
 
 #FETCH ANY USER-SPECIFIC OPTIONS FROM e.ini:
 
 $pgmhome = $0;
-$pgmhome =~ s#[^/]*$##;  #SET NAME TO SQL.PL FOR ORAPERL!
+$pgmhome =~ s#[^/]*$##;
 $pgmhome ||= './';
 (my $usehome = $pgmhome) =~ s#\/bin\/#\/share\/E\/#  unless ($bummer);
 $pgmhome = $usehome  if (-d $usehome);
@@ -128,105 +129,10 @@ $debug = 1  if ($d || $debug);
 $systmp ||= (-d '/tmp/ram') ? '/tmp/ram' : '/tmp';
 $hometmp = (-w "${homedir}tmp") ? "${homedir}tmp" : $systmp;
 $webtmp ||= $ENV{'WEBTMP'} || $systmp;
+
 open DEBUG, ">${systmp}/e.dbg"  if ($debug);
-if ($ARGV[0])
-{
-	(my $argPath = $ARGV[0]) =~ s#\/[^\/]+$##o;
-	$argPath = '.'  if ($argPath eq $ARGV[0]);   #JWT:ADDED 20130506 TO CAUSE THE SEARCH FOR ini FILES TO START IN DIRECTORY THE FILE IS IN (EVEN IF THE FILE NAME CONTAINS NO PATH INFO)!
-	my $argPathwSlash = $argPath;
-	$argPathwSlash .= '/'  unless ($argPathwSlash =~ m#\/$#);
-	$_ = ($0 =~ m#\/([^\/]+)$#o) ? $1 : $0;
-	s/(\w+)\.\w+$/$1\.ini/g;
 
-	#LOOKING FOR AN .ini FILE:
-
-	if (-r  "${argPathwSlash}$_")   #1: THERE'S AN .ini FILE IN THE DIR WHERE THE FILE BEING EDIT IS - USE THAT!
-	{
-		$curdir = $argPathwSlash;
-		print DEBUG "+++ USING (${argPathwSlash}$_)! FOR INI (found in same dir as file being edited!\n"  if ($debug);
-	}
-	else  #2: CHECK ~/.myeprofiles FOR A MAPPING OF THE DIR WHERE THE FILE BEING EDIT IS, IF SO, USE THAT!
-	{
-		if (-f "${homedir}.myeprofiles" && open(PROFILE, "${homedir}.myeprofiles"))
-		{
-			my ($srcPath, $profilePath);
-			if ($argPath eq '.') {
-				$argPath = $curdir;
-			} elsif ($argPath !~ m#^\/#) {
-				$argPath = ($curdir =~ m#\/$#) ? "${curdir}$argPath" : "${curdir}/$argPath";
-			}
-			while (<PROFILE>)
-			{
-				chomp;
-				s/[\r\n\s]+$//o;
-				s/^\s+//o;
-				next  if (/^\#/o);
-				next  unless (/\:/o);
-				s/^(\w)\:/$1\^/o;   #PROTECT WINBLOWS DRIVE-LETTERS!
-				($srcPath, $profilePath) = split(m#\/?\:#o, $_, 2);
-				print DEBUG "******* ARGPATH=$argPath= curdir=$curdir= PROFILEPATH=$srcPath($profilePath)=\n"  if ($debug);
-				if ($argPath =~ /^$srcPath/ || $curdir =~ /^$srcPath/)
-				{
-					$curdir = $profilePath;
-					print DEBUG "******* PATH FOUND IN PROFILE - WILL USE =$profilePath=\n"  if ($debug);
-					last;
-				}
-			}
-			close PROFILE;
-		}
-	}
-}
-$curdir ||= $homedir;   #3:  IF NOTHING FOUND IN ~/.myeprofiles, TRY USER'S HOME DIRECTORY:
-print DEBUG "--AFT-- ini dir=$curdir= ARGV0=$ARGV[0]=\n"  if ($debug);
-
-$curdir .= '/'  unless ($curdir =~ m#\/$#o);
-$cwd ||= $curdir;
-$_ = ($0 =~ m#\/([^\/]+)$#o) ? $1 : $0;
-s/(\w+)\.\w+$/$1\.ini/g;
-%mimeTypes = ();
-
-while ($curdir) {  #4: TRY THE DIRECTORY'S PARENTS, UP TO AND INCLUDING "/":
-	print DEBUG "-0: trying (${curdir}$_)!\n"  if ($debug);
-	last  if (-r "${curdir}$_");
-	chop $curdir;
-	last  unless ($curdir);
-	$curdir =~ s#\/[^\/]+$#\/#o;
-}
-
-unless ($curdir)  #5: TRY THE PROGRAM'S "SHARED HOME" (../share/E/):
-{
-	$_ = ($0 =~ m#\/([^\/]+)$#o) ? $1 : $0;
-	s/\..*$/\.ini/;
-	$_ = $pgmhome . $_;
-	print DEBUG "----2a: (look in program share dir($pgmhome): ini=$_=\n"  if ($debug);
-	unless (-r $_) {   #6: LASTLY, TRY THE DIRECTORY THE PGM RESIDES IN - ONLY NEEDED FOR MY LEGACY CONFIGURATION (asstartuppre.pl)!
-		$_ = $0;
-		s/(\w+)\.\w+$/$1\.ini/g;
-		print DEBUG "----2b: (look in program dir): ini=$_=\n"  if ($debug);
-	}
-}
-
-print DEBUG "-3: will use (${curdir}$_)!\n"  if ($debug);
-if (open PROFILE, "${curdir}$_")
-{
-	while (<PROFILE>)
-	{
-		chomp;
-		s/[\r\n\s]+$//o;
-		s/^\s+//o;
-		next  if (/^\#/o);
-		($opt, $val) = split(/\=/o, $_, 2);
-		if ($opt =~ /^\$/o)
-		{
-			eval "$opt = \"$val\";";
-		}
-		else
-		{
-			${$opt} = $val  if ($opt && !defined(${$opt}));
-		}
-	}
-	close PROFILE;
-}
+&fetchIniFileData($ARGV[0], -1, 0);  #INITIALIZE GLOBAL .ini OPTIONS HERE.
 
 if ($0 =~ /exe$/io)   #FETCH COMMAND-LINE OPTIONS SINCE "-s" DOES NOT WORK IN PAR .exe'S?!
 {
@@ -317,12 +223,10 @@ $focustab = 'Tab'.($focustab+1)  if ($focustab =~ /^\d+$/o);
 
 #print DEBUG "-???- codetext=$codetext=\n"  if ($debug);
 if ($haveTextHighlight) {
-	my $spacesperTab = $tabspacing || 3;
-	my $tspaces = ' ' x $spacesperTab;
 	%{$extraOptsHash{texthighlight}} = (-syntax => ($codetext||$havePerlCool), 
 			-autoindent => 1, 
 			-rulesdir => ($codetextdir||$ENV{'HOME'}),
-			-indentchar => ($notabs ? $tspaces : "\t"),
+#x (CAN'T DO HERE, LOADING FILE MAY RE-CONFIGURE NOW!:			-indentchar => ($notabs ? $tspaces : "\t"),
 			-highlightInBackground => (defined $hib) ? $hib : 1,
 	);
 	${$extraOptsHash{texthighlight}}{'-syntaxcomments'} = 1  if ($Tk::TextHighlight::VERSION >= 2.0);
@@ -349,14 +253,13 @@ use Tk::JFileDialog;
 
 #-----------------------
 
-$vsn = '6.62';
+$vsn = '6.64';
 
 $editmode = $v ? 'View' : 'Edit';
 
 my (%marklist, %opsysList, %alreadyHaveXMLMenu, %activeWindows, %text1Hash);
 my (%scrnCnts, %saveStatus);
 my $nextTab = '1';
-our %cmdfile;
 
 $dirsep = '/';
 if ($bummer)
@@ -815,12 +718,20 @@ $editMenubtn->command(
 		-label => 'Paste (Clipboard)',
 		-underline =>0,
 		-command => [\&doPaste,'CLIPBOARD']);
-$editMenubtn->command(-label => 'Paste (Primary)', -underline =>13, -command => [\&doPaste,'PRIMARY']);
+$editMenubtn->command(
+		-label => 'Paste (Primary)',
+		-underline =>13,
+		-command => [\&doPaste,'PRIMARY']);
 $editMenubtn->separator;
-$editMenubtn->command(-label => 'Colors',   -underline =>1, -command => [\&doColorEditor]);
-#		unless ($bummer);
-$editMenubtn->command(-label => 'Insert file',   -underline =>0, -command => [\&appendfile]);
-$editMenubtn->command(-label => ($v ? 'Edit This' : 'View This'),   -underline => ($v ? 1 : 0),
+$editMenubtn->command(
+		-label => 'Colors',
+		-underline =>1,
+		-command => [\&doColorEditor]);
+$editMenubtn->command(-label => 'Insert file',
+		-underline =>0,
+		-command => [\&appendfile]);
+$editMenubtn->command(-label => ($v ? 'Edit This' : 'View This'),
+		-underline => ($v ? 1 : 0),
 		-command => [\&editfile,$v]);
 $editMenubtn->command(-label => 'Undo',
 		-underline =>0,
@@ -865,7 +776,6 @@ $editMenubtn->command(-label => 'Wrap word', -underline => 0, -command => [\&set
 $editMenubtn->command(-label => 'Wrap char', -command => [\&setwrap,'char']);
 $editMenubtn->command(-label => 'Wrap none', -command => [\&setwrap,'none']);
 $editMenubtn->command(-label => 'Reverse', -command => [\&reverseit]);
-#$editMenubtn->command(-label => 'Chg. Tabs', -command => [\&chgtabs]);
 $editMenubtn->pack(@menuPackOps);
 
 my $findMenubtn = $w_menu->Menubutton(
@@ -1250,25 +1160,7 @@ if (!defined($tabs) && $ARGV[0])
 		!e;
 		$startpath = $cmdfid;
 		$startpath =~ s#[^\/]+$##o;
-		my @histlist = ("$cmdfid\n");
-		if (open(T, $histFile))
-		{
-			while (<T>)
-			{
-				push (@histlist, $_);
-			}
-			close T;
-		}
-		if (open(T, ">$histFile"))
-		{
-			print T shift(@histlist);
-			while (@histlist)
-			{
-				$_ = shift(@histlist);
-				print T $_   unless ($_ eq "$cmdfid\n");
-			}
-			close T;
-		}
+		&add2hist($cmdfid);
 		(my $filePart = $cmdfile{''}[0]) =~ s#^.*\/([^\/]+)$#$1#;
 		$tabbedFrame->pageconfigure($activeTab, -label => $filePart)  unless ($nobrowsetabs);
 #		$activeWindow = 1;
@@ -1300,24 +1192,7 @@ if (!defined($tabs) && $ARGV[0])
 				$startpath = $cmdfid;
 				$startpath =~ s#[^\/]+$##o;
 				my @histlist = ("$cmdfid\n");
-				if (open(T, $histFile))
-				{
-					while (<T>)
-					{
-						push (@histlist, $_);
-					}
-					close T;
-				}
-				if (open(T, ">$histFile"))
-				{
-					print T shift(@histlist);
-					while (@histlist)
-					{
-						$_ = shift(@histlist);
-						print T $_   unless ($_ eq "$cmdfid\n");
-					}
-					close T;
-				}
+				&add2hist($cmdfid);
 				&gotoMark($textScrolled[$activeWindow], (defined($posn) ? $posn : '_Bookmark'), 'append');
 			}
 		}
@@ -1536,6 +1411,8 @@ unless ($haveTextHighlight && $Tk::TextHighlight::VERSION >= 2.0) {
 			$s =~ /^(\s*)/o;
 			if ($doAutoIndent) {
 				#NOTE:  WE ALWAYS USE -smartindent!:
+				my $spacesperTab = $tabspacing{$activeTab}[$activeWindow] || 3;
+				my $tspaces = ' ' x $spacesperTab;
 				my $thisindent = defined($1) ? $1 : '';
 				my $s2 = '';
 				my $thisindlen = length($thisindent);
@@ -1545,7 +1422,7 @@ unless ($haveTextHighlight && $Tk::TextHighlight::VERSION >= 2.0) {
 				$s2 =~ /^(\s*)/o;
 				my $nextindent = defined($1) ? $1 : '';
 				my $nextindlen = length($nextindent);
-				my $indentchar = ($notabs ? $tspaces : "\t");
+				my $indentchar = ($notabs{$activeTab}[$activeWindow] ? $tspaces : "\t");
 				if ($s =~ /[\{\[\(]\s*(?:\Q$cc\E.*)?$/o) {  #CURRENT LINE ENDS IN AN OPENING BRACE (INDENT AT LEAST 1 INDENTATION):
 					$insertStuff .= ($nextindlen > $thisindlen) ? $nextindent : "$thisindent$indentchar";
 				} else {  #NORMAL LINE (KEEP SAME INDENT UNLESS NEXT LINE FURTHER INDENTED):
@@ -1612,6 +1489,132 @@ while (Tk::MainWindow->Count)
 		eval { $xpopup2->update  }  if (Exists($xpopup2));
 	}
 	DoOneEvent(ALL_EVENTS);
+}
+
+sub fetchIniFileData  #FINDS NEAREST .ini FILE & LOADS ANY USER-OPTIONS:
+{
+	my ($fid, $aw, $at) = @_;
+
+	#.ini FILES ARE SEARCHED FOR IN ORDER OF:  [<fid-dir>,] <-curdir>, <cwd> & parents, <homedir>, <pgm-bin-dir>, <pgm-share-dir>
+	
+	my $inidir = $curdir;
+	print DEBUG "--fetchIniFileData(inidir=$inidir, fid=$fid, aw=$aw, at=$at)\n"  if ($debug);
+	if ($fid)
+	{
+		(my $argPath = $fid) =~ s#\/[^\/]+$##o;
+		$argPath = '.'  if ($argPath eq $fid);   #JWT:ADDED 20130506 TO CAUSE THE SEARCH FOR ini FILES TO START IN DIRECTORY THE FILE IS IN (EVEN IF THE FILE NAME CONTAINS NO PATH INFO)!
+		my $argPathwSlash = $argPath;
+		$argPathwSlash .= '/'  unless ($argPathwSlash =~ m#\/$#);
+		$_ = ($0 =~ m#\/([^\/]+)$#o) ? $1 : $0;
+		s/(\w+)\.\w+$/$1\.ini/g;
+
+		#LOOKING FOR AN .ini FILE:
+
+		if (-r  "${argPathwSlash}$_")   #1: THERE'S AN .ini FILE IN THE DIR WHERE THE FILE BEING EDITED IS - USE THAT!
+		{
+			$inidir = $argPathwSlash;
+			print DEBUG "+++ USING (${argPathwSlash}$_)! FOR INI (found in same dir as file being edited!\n"  if ($debug);
+		}
+		else  #2: CHECK ~/.myeprofiles FOR A MAPPING OF THE DIR WHERE THE FILE BEING EDIT IS, IF SO, USE THAT!
+		{
+			if (-f "${homedir}.myeprofiles" && open(PROFILE, "${homedir}.myeprofiles"))
+			{
+				my ($srcPath, $profilePath);
+				if ($argPath eq '.') {
+					$argPath = $curdir;
+				} elsif ($argPath !~ m#^\/#) {
+					$argPath = ($curdir =~ m#\/$#) ? "${curdir}$argPath" : "${curdir}/$argPath";
+				}
+				while (<PROFILE>)
+				{
+					chomp;
+					s/[\r\n\s]+$//o;
+					s/^\s+//o;
+					next  if (/^\#/o);
+					next  unless (/\:/o);
+					s/^(\w)\:/$1\^/o;   #PROTECT WINBLOWS DRIVE-LETTERS!
+					($srcPath, $profilePath) = split(m#\/?\:#o, $_, 2);
+					print DEBUG "******* ARGPATH=$argPath= curdir=$curdir= PROFILEPATH=$srcPath($profilePath)=\n"  if ($debug);
+					if ($argPath =~ /^$srcPath/ || ($curdir && $curdir =~ /^$srcPath/))
+					{
+						$inidir = $profilePath;
+						print DEBUG "******* PATH FOUND IN PROFILE - WILL USE =$profilePath=\n"  if ($debug);
+						last;
+					}
+				}
+				close PROFILE;
+			}
+		}
+	}
+	print DEBUG "--AFT-- ini dir=$inidir= EDITING FILE=$fid=\n"  if ($debug);
+
+	$inidir .= '/'  unless ($inidir =~ m#\/$#o);
+	$_ = ($0 =~ m#\/([^\/]+)$#o) ? $1 : $0;
+	s/(\w+)\.\w+$/$1\.ini/g;
+	%mimeTypes = ();
+
+	while ($inidir) {  #4: TRY THE DIRECTORY'S PARENTS, UP TO AND INCLUDING "/":
+		print DEBUG "-0: trying (${inidir}$_)!\n"  if ($debug);
+		last  if (-r "${inidir}$_");
+		chop $inidir;
+		last  unless ($inidir);
+		$inidir =~ s#\/[^\/]+$#\/#o;
+	}
+
+	print DEBUG "-after looking up to root, inidir=$inidir= homedir=$homedir= pgmhome=$pgmhome=\n"  if ($debug);
+
+	unless ($inidir)  #5: TRY THE USER'S HOME DIRECTORY:
+	{
+		$inidir = $homedir  if (-r "${homedir}$_");
+		print DEBUG "----5: (look in user's home dir): ini=$inidir= cash=$_=\n"  if ($debug);
+	}
+
+	unless ($inidir)  #6: TRY THE PROGRAM'S "SHARED HOME" (../share/E/):
+	{
+		print DEBUG "----6a: (look in program dir($pgmhome): ini=$_=\n"  if ($debug);
+		unless (-r "${pgmhome}$_") {   #7: LASTLY, TRY THE DIRECTORY THE PGM RESIDES IN - ONLY NEEDED FOR MY LEGACY CONFIGURATION (asstartuppre.pl)!
+			if ((my $sharehome = $pgmhome) =~ s#\/share\/E#\/bin#) {
+				$inidir = $sharehome;
+				print DEBUG "----6b: (look in program share dir): ini=$inidir= cash=$_=\n"  if ($debug);
+			}
+		}
+	}
+
+	print DEBUG "-3: will use (${inidir}$_)!\n"  if ($debug);
+	foreach my $opt (qw(tabspacing notabs)) {  #SEPARATE VALUES ALLOWED FOR EACH WINDOW/TAB:
+		if (defined ${$opt}) {
+			print DEBUG "--init instance-specific opt=$opt= value=${$opt}=\n"  if ($debug);
+			eval "\$${opt}{$at}[$aw] = \${$opt}";
+		}
+	}
+	if ($inidir && open PROFILE, "${inidir}$_")
+	{
+		print DEBUG "---SUCESSFULLY OPENED INI=${inidir}$_= AW=$aw=\n"  if ($debug);
+		while (<PROFILE>)
+		{
+			chomp;
+			s/[\r\n\s]+$//o;
+			s/^\s+//o;
+			next  if (/^\#/o);
+			($opt, $val) = split(/\=/o, $_, 2);
+			if ($aw < 0)  #NO ACTIVE WINDOW YET (INITIAL STARTUP):
+			{
+				${$opt} = $val  if ($opt && !defined(${$opt}));
+			}
+			elsif ($opt =~ /^\$/o)
+			{
+				print DEBUG "-!!!- opt starts w/cash! (=$opt= val=$val)!\n"  if ($debug);
+				eval "$opt = \"$val\";";
+			}
+			elsif ($opt && $opt =~ /^(?:tabspacing|notabs)$/o)  #SEPARATE VALUES ALLOWED FOR EACH WINDOW/TAB:
+			{
+				print DEBUG "---- instance-specific opt=$opt= value=$val=\n"  if ($debug);
+				eval "\$${opt}{$at}[$aw] = \$val";
+				print DEBUG "--$opt($at)($aw):=$opt{$at}[$aw]=\n"  if ($debug);
+			}
+		}
+		close PROFILE;
+	}
 }
 
 sub anyChanges
@@ -1735,6 +1738,7 @@ sub newTabFn
 		$text1Frame = $tabbedFrame->add( $activeTab, -label=> "Tab $nextTab", -raisecmd => [\&chgTabs, $nextTab]);
 		++$nextTab;
 	}
+	&fetchIniFileData('', $activeWindow, $activeTab);  #MUST INIT PAINE-SPECIFIC .ini FILE OPTIONS HERE (USER MAY NOT EDIT AN EXISTING FILE):
 	my $useAnsiColor = ($AnsiColor && ($textwidget =~ /(?:TextHighlight|SuperText)/) && !$noac) ? 1 : 0;
 	my %ansiColorFlags = $useAnsiColor ? ('-ansicolor' => $useAnsiColor) : ();
 	if ($SuperText && !$noac && !$v)
@@ -1805,7 +1809,7 @@ sub newTabFn
 			-command => [\&jump2top, 1],
 		)->pack(-side => 'top', -padx => 0, -pady => 0, -anchor => 'se');
 	}
-print DEBUG "-tsw=$textsubwidget= tw=$textwidget= active=$activeTab= SAVE-ON-DESTROY SET!\n"  if ($debug);
+	print DEBUG "-tsw=$textsubwidget= tw=$textwidget= active=$activeTab= SAVE-ON-DESTROY SET!\n"  if ($debug);
 	unless ($v || $nosod)
 	{
 		$textScrolled[0]->Subwidget($textsubwidget)->OnDestroy([\&SaveOnDestroy, 'X', 0, 0, $activeTab, $textScrolled[0]]);
@@ -1844,7 +1848,8 @@ print DEBUG "-tsw=$textsubwidget= tw=$textwidget= active=$activeTab= SAVE-ON-DES
 				-relief => $mytextrelief,
 				-wrap	=> $wrap,
 				-height => int($height / 2)-1,
-				-width  => $width, %{$extraOptsHash{$textsubwidget}});
+				-width  => $width, %{$extraOptsHash{$textsubwidget}}
+		);
 		$textScrolled[1]->Subwidget($textsubwidget)->configure(
 				-setgrid=> 1,
 				-font	=> $fixedfont,
@@ -1853,7 +1858,18 @@ print DEBUG "-tsw=$textsubwidget= tw=$textwidget= active=$activeTab= SAVE-ON-DES
 				-relief => $mytextrelief,
 				-wrap	=> $wrap,
 				-height => int($height / 2)-1,
-				-width  => $width, %{$extraOptsHash{$textsubwidget}});
+				-width  => $width, %{$extraOptsHash{$textsubwidget}}
+		);
+		if ($textsubwidget eq 'texthighlight') {
+			my $spacesperTab = $tabspacing{$activeTab}[$activeWindow] || 3;
+			my $tspaces = ' ' x $spacesperTab;
+			$textScrolled[0]->Subwidget($textsubwidget)->configure(
+					-indentchar => ($notabs{$activeTab}[$activeWindow] ? $tspaces : "\t")
+			);
+			$textScrolled[1]->Subwidget($textsubwidget)->configure(
+					-indentchar => ($notabs{$activeTab}[$activeWindow] ? $tspaces : "\t")
+			);
+		}
 
 		if ($viewer eq 'XMLViewer') {  #MAKE LITTLE +/- SQUARES WHITE ON DARK BG. FOR XMLVIEWER ("NIGHT 65")!:
 			my ($red, $green, $blue) = $textScrolled[$activeWindow]->Subwidget($textsubwidget)->rgb(
@@ -2289,8 +2305,7 @@ sub chgTabs
 sub openFn		#File.Open (Open a different command file)
 {
 	my ($openfid) = shift;
-	my ($usrres);
-	$usrres = $No;
+	my $usrres = $No;
 	unless ($v)
 	{
 		if (anyChanges($activeTab, $activeWindow))
@@ -2345,6 +2360,7 @@ sub openFn		#File.Open (Open a different command file)
 				(my $filePart = $cmdfile{$activeTab}[$activeWindow]) =~ s#^.*\/([^\/]+)$#$1#;
 				$tabbedFrame->pageconfigure($activeTab, -label => $filePart)  unless ($nobrowsetabs);
 			}
+			&add2hist($openfid)  if ($openfid);
 			&gotoMark($textScrolled[$activeWindow], (defined($posn) ? $posn : '_Bookmark'), 'append');
 		}
 		else
@@ -2718,8 +2734,14 @@ sub fetchdata
 		}
 		else
 		{
+			&fetchIniFileData($fid, $activeWindow, $activeTab);  #LOAD PAINE-SPECIFIC .ini OPTIONS FOR THE LOADED FILE:
 			if ($haveTextHighlight && ($editor =~ /texthighlight/io || $viewer =~ /texthighlight/io))
 			{
+				my $spacesperTab = $tabspacing{$activeTab}[$activeWindow] || 3;
+				my $tspaces = ' ' x $spacesperTab;
+				$textScrolled[$activeWindow]->Subwidget($textsubwidget)->configure(
+						-indentchar => ($notabs{$activeTab}[$activeWindow] ? $tspaces : "\t")
+				);
 				my $fext = '';
 				$fext = $1  if ($fid =~ /\.(\w+)$/o);
 				if ($codetext)  #FORCES ALWAYS USE SPECIFIED SYNTAX HIGHLIGHTER:
@@ -2731,7 +2753,7 @@ sub fetchdata
  				elsif ($mimeTypes{$fext})  #SELECT HIGHLIGHTER BASED ON FILE EXTENSION:
 				{
 					my $langModule = ($mimeTypes{$fext} eq 'Kate') ? &kateExt($fid) : $mimeTypes{$fext};
-print DEBUG "-chose $mimeTypes{$fext} from mime file!\n"  if ($debug);
+					print DEBUG "-chose $mimeTypes{$fext} from mime file!\n"  if ($debug);
 					$textScrolled[$activeWindow]->Subwidget($textsubwidget)->configure(
 							-syntax => $langModule);
 				}
@@ -2763,7 +2785,7 @@ print DEBUG "-chose $mimeTypes{$fext} from mime file!\n"  if ($debug);
 				{
 					$textScrolled[$activeWindow]->Subwidget($textsubwidget)->configure(
 							-syntax => 'Xresources');
-print DEBUG "-chose Xresource from file name.\n"  if ($debug);
+					print DEBUG "-chose Xresource from file name.\n"  if ($debug);
 				}
 				else  #LOOK FOR A "SHABANG" LINE AND TRY TO DETERMINE HIGHLIGHTING FROM THAT:
 				{
@@ -2772,20 +2794,20 @@ print DEBUG "-chose Xresource from file name.\n"  if ($debug);
 					{
 						$textScrolled[$activeWindow]->Subwidget($textsubwidget)->configure(
 								-syntax => $haveKate ? 'Kate::Perl' : $havePerlCool);
-print DEBUG "-chose Perl based on line 1(#!); haveKate=$haveKate!\n"  if ($debug);
+						print DEBUG "-chose Perl based on line 1(#!); haveKate=$haveKate!\n"  if ($debug);
 					}
 					elsif ($line1 =~ /\#\!.+sh\s*$/o)  #LOOKS LIKE A SHELL-SCRIPT:
 					{
 						$textScrolled[$activeWindow]->Subwidget($textsubwidget)->configure(
 								-syntax => 'Bash');
-print DEBUG "-chose Bash based on line 1(#!)!\n"  if ($debug);
+						print DEBUG "-chose Bash based on line 1(#!)!\n"  if ($debug);
 					}
 					else   #DON'T KNOW, SO NOT GONNA HIGHTLIGHT AT ALL!:
 					{
 						my $langModule = $haveKate ? (&kateExt($fid) || 'None') : 'None'; 
 						$textScrolled[$activeWindow]->Subwidget($textsubwidget)->configure(
 								-syntax => $langModule);
-print DEBUG "-chose (otherwise) $langModule!\n"  if ($debug);
+						print DEBUG "-chose (otherwise) $langModule!\n"  if ($debug);
 					}
 				}
 				$textScrolled[$activeWindow]->Subwidget($textsubwidget)->configure('-rules' => undef);
@@ -2794,7 +2816,6 @@ print DEBUG "-chose (otherwise) $langModule!\n"  if ($debug);
 				$textScrolled[$activeWindow]->Subwidget($textsubwidget)->bind('<F12>' => [\&reHighlight,1]);
 				my $hlmenu;
 				eval { $hlmenu = $editMenubtn->entrycget('Re-Highlight', '-label'); };
-#print DEBUG (defined($hlmenu) ? "HIGHLIGHT menu ALREADY DEFINED!\n" : "No highlight menu defined yet!\n");
 				unless (defined($hlmenu))
 				{
 					$editMenubtn->command(-label => 'Re-Highlight', -command => [\&reHighlight,0]);
@@ -3664,9 +3685,9 @@ sub doIndent
 	&beginUndoBlock($textScrolled[$activeWindow])  if ($standAloneBlock);
 	my ($lastpos) = $textScrolled[$activeWindow]->index('sel.last');
 
-	my $spacesperTab = $tabspacing || 3;
+	my $spacesperTab = $tabspacing{$activeTab}[$activeWindow] || 3;
 	my $tspaces = ' ' x $spacesperTab;
-	my $indentStr = $notabs ? $tspaces : "\t";
+	my $indentStr = $notabs{$activeTab}[$activeWindow] ? $tspaces : "\t";
 
 	$textScrolled[$activeWindow]->markSet('selstart','sel.first linestart - 2 char');
 	if ($lastpos =~ /\.0$/o)
@@ -3931,7 +3952,6 @@ sub gettext
 	if (Exists($textPopup))
 	{
 		$MainWin->focus()  if ($Steppin);
-#print DEBUG "-4--AW=$activeWindow= AT=$activeTab= scr0=$textScrolled[0]=\n"  if ($debug);
 		$textScrolled[$activeWindow]->Subwidget($textsubwidget)->focus;
 		$textPopup->destroy;
 		$MainWin->raise()  if ($Steppin);
@@ -4257,7 +4277,6 @@ sub GlobalSrchRep
 	my ($wholething) = undef;
 
 	eval { $whichTextWidget->tagAdd('sel', 'savesel.first', 'savesel.last'); };
-print STDERR "-5- GlobalSrchRep: markall=$markAllMatches=\n"  if ($debug);
 	$findMenubtn->entryconfigure('Search Again', -state => 'normal');
 	$findMenubtn->entryconfigure('Search Forward >', -state => 'normal');
 	$findMenubtn->entryconfigure('Search Backward <', -state => 'normal');
@@ -4268,7 +4287,6 @@ print STDERR "-5- GlobalSrchRep: markall=$markAllMatches=\n"  if ($debug);
 	$replstr = '';
 	eval { $replstr = (defined $replText) ? $replText->get : ''; };
 	$MainWin->focus()  if ($Steppin);
-print STDERR "-10--AW=$activeWindow= AT=$activeTab= scr0=$textScrolled[0]=\n"  if ($debug);
 	$textScrolled[$activeWindow]->Subwidget($textsubwidget)->focus;
 	$xpopup->destroy  if (Exists($xpopup));
 	$MainWin->raise()  if ($Steppin);
@@ -4291,7 +4309,6 @@ print STDERR "-10--AW=$activeWindow= AT=$activeTab= scr0=$textScrolled[0]=\n"  i
 		#$wholething = $whichTextWidget->get('0.0','end');
 		$selstart = '0.0';
 		$selend = $whichTextWidget->index('end');
-print STDERR "-10- NOT whole thing, start=$selstart, end=$selend, replstr=$replstr=\n"  if ($debug);
 		if (length($replstr))
 		{
 			$replDialog->configure(
@@ -4312,11 +4329,11 @@ print STDERR "-10- NOT whole thing, start=$selstart, end=$selend, replstr=$repls
 	}
 #RATHER NOT DO WHOLE THING!:	&beginUndoBlock($whichTextWidget);
 	$textScrolled[$activeWindow]->markSet('_prev','insert');
-print STDERR "--srchstr WAS=$srchstr=\n"  if ($debug);
+	print STDERR "--srchstr WAS=$srchstr=\n"  if ($debug);
 	#NOTE:  TO DELETE ENTIRE LINES THAT CONTAIN SEARCH-STR, SPECIFY LIKE:
 	#".+PATTERN\n", REPLACE="``", AND SELECT "REGULAR-EXPRESSION!:
 	my $hasEOL = ($srchstr =~ s/\\n$/\$/s) ? ' + 1 char' : '';
-print STDERR "--HASEOL=$hasEOL= srchstr NOW=$srchstr=\n"  if ($debug);
+	print STDERR "--HASEOL=$hasEOL= srchstr NOW=$srchstr=\n"  if ($debug);
 	while (1)
 	{
 		$srchpos = $whichTextWidget->search(-forwards, $srchopts, -count => \$lnoffset, '--', $srchstr, $srchpos, 'end');
@@ -4333,7 +4350,7 @@ print STDERR "--HASEOL=$hasEOL= srchstr NOW=$srchstr=\n"  if ($debug);
 				-background  => 'yellow',
 				-foreground     => 'black');
 		$chgstr = $whichTextWidget->get('foundme.first','foundme.last');
-print STDERR "--CHGSTR WAS=$chgstr= replstr=$replstr=\n"  if ($debug);
+		print STDERR "--CHGSTR WAS=$chgstr= replstr=$replstr=\n"  if ($debug);
 		&addMark($chgstr)  if ($markAllMatches);
 		if (length($replstr) && !$v)
 		{
@@ -4346,17 +4363,17 @@ print STDERR "--CHGSTR WAS=$chgstr= replstr=$replstr=\n"  if ($debug);
 						"$str"
 				/eg;
 				$chgstr =~ s/$srchstr/eval "return \"$replstrx\""/egs;
-print STDERR "--REGEXP: CHGSTR NOW=$chgstr= FM=$srchstr= TO=$replstrx=\n"  if ($debug);
+				print STDERR "--REGEXP: CHGSTR NOW=$chgstr= FM=$srchstr= TO=$replstrx=\n"  if ($debug);
 			}
 			elsif ($srchopts eq '-nocase')
 			{
 				$chgstr =~ s/\Q$srchstr\E/$replstrx/eigs;
-print STDERR "--NOCASE: CHGSTR NOW=$chgstr= FM=$srchstr= TO=$replstrx=\n"  if ($debug);
+				print STDERR "--NOCASE: CHGSTR NOW=$chgstr= FM=$srchstr= TO=$replstrx=\n"  if ($debug);
 			}
 			else
 			{
 				$chgstr =~ s/\Q$srchstr\E/$replstrx/egs;
-print STDERR "--CASE: CHGSTR NOW=$chgstr= FM=$srchstr= TO=$replstrx=\n"  if ($debug);
+				print STDERR "--CASE: CHGSTR NOW=$chgstr= FM=$srchstr= TO=$replstrx=\n"  if ($debug);
 			}
 		}
 		&beginUndoBlock($whichTextWidget);
@@ -5499,12 +5516,27 @@ sub jumpToTag
 	$lnoffset = 0;
 }
 
-sub chgtabs
-{
-	&gettext("Spaces/tab(0=\\t):",2,'t',0,0,1);
-	return 0  unless ($intext && $intext ne '*cancel*');
-	$tabspacing = $intext  if ($intext =~ /^\d+$/ && $intext <= 12);
-	$notabs = $intext  unless ($intext);
+sub add2hist {
+	my $fid = shift;
+	my @histlist = ("$fid\n");
+	if (open(T, $histFile))
+	{
+		while (<T>)
+		{
+			push (@histlist, $_);
+		}
+		close T;
+	}
+	if (open(T, ">$histFile"))
+	{
+		print T shift(@histlist);
+		while (@histlist)
+		{
+			$_ = shift(@histlist);
+			print T $_   unless ($_ eq "$fid\n");
+		}
+		close T;
+	}
 }
 
 __END__
@@ -5562,6 +5594,12 @@ use E Editor as a (readonly) viewer, simply symlink "v.pl" to "e.pl".
 Drag and Drop files is available for M$-Windows users.
 
 =head1 OPTIONS
+
+Note:  "Path-specific options can have separate values for each file being 
+edited / viewed based on the path of that file and the presence of a .ini 
+file in that file's path or the one that that path references in the 
+profiles file, if any.  Other options will have the same value for all files 
+being edited / viewed based on the .ini file chosen at startup.
 
 =over 4
 
@@ -5680,7 +5718,7 @@ Default:  (multi-tab browing enabled and at least one tab shows).
 
 =item B<-notabs>=I<0|1>
 
-Pad indentations with 0=tabs, or 1=spaces.
+Pad indentations with 0=tabs, or 1=spaces.  This option can be path-specific.
 Default:  I<0>: tabs.
 
 =item B<-palette>=I<color-palette-name>
@@ -5711,7 +5749,8 @@ Default:  (editor: I<1>, viewer: I<0>).
 
 =item B<-tabspacing>=I<#>
 
-Number of spaces equivalent to a tab when indenting.
+Number of spaces equivalent to a tab when indenting.  This option can be 
+path-specific.
 Default:  I<3>.
 
 =item B<-theme>=I<themename>
