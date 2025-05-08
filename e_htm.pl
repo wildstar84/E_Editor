@@ -58,7 +58,7 @@ sub perlFn
 				$textScrolled[$activeWindow]->insert('sel.last',"<!:/$tagname>");
 		return;
 	}
-	elsif ($runit == 2)   #FIRE UP NETSCAPE!
+	elsif ($runit == 2)   #FIRE UP BROWSER!
 	{
 		$_ = '';
 		my $browser;   #ADDED 20021007 TO ALLOW USER TO SELECT BROWSER.
@@ -162,9 +162,9 @@ if ($debug);
 			$startline =~ s/\..*//o;
 			my ($endline) = $endpos;
 			$endline =~ s/\..*//o;
-	my $spacesperTab = $tabspacing || 3;
+	my $spacesperTab = $tabspacing{$activeTab}[$activeWindow] || $tabspacing || 3;
 	my $tspaces = ' ' x $spacesperTab;
-	my $indentStr = $notabs ? $tspaces : "\t";
+	my $indentStr = $notabs{$activeTab}[$activeWindow] ? $tspaces : "\t";
 			my ($x) = '';
 			my ($x2) = '';
 			if (($endline > $startline) && ($startpos =~ /\.0$/o) && ($endpos =~ /\.0$/o))
@@ -174,9 +174,9 @@ if ($debug);
 #				$x =~ s/\t/   /g;
 #				$x =~ s/   /\t/g;
 				$x =~ s/\t/$tspaces/g;
-				$x =~ s/$tspaces/\t/g  unless ($notabs);
+				$x =~ s/$tspaces/\t/g  unless ($notabs{$activeTab}[$activeWindow]);
 				my ($tabcnt) = length($x);
-				$tabcnt /= $spacesperTab  if ($notabs);
+				$tabcnt /= $spacesperTab  if ($notabs{$activeTab}[$activeWindow]);
 				if ($mytag eq 'QUOTE')
 				{
 					eval {$textScrolled[$activeWindow]->insert('sel.first',"$x&quot;\n");};

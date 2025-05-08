@@ -105,13 +105,15 @@ if ($bummer)
 	$ENV{'HOME'} =~ s#\\#\/#gso;
 }
 
+my %mimeTypes = ();
 our $activeWindow = 0;
-our %cmdfile, %tabspacing, %notabs;
+our $activeTab = '';
+our %cmdfile, %tabspacing, %notabs, %kandrstyle;
 
 #FETCH ANY USER-SPECIFIC OPTIONS FROM e.ini:
 
-$pgmhome = $0;
-$pgmhome =~ s#[^/]*$##;
+our $pgmhome = $0;
+my $pgmname = ($pgmhome =~ s#([^/]*)$##) ? $1 : ($v ? 'v.pl' : 'e.pl');
 $pgmhome ||= './';
 (my $usehome = $pgmhome) =~ s#\/bin\/#\/share\/E\/#  unless ($bummer);
 $pgmhome = $usehome  if (-d $usehome);
@@ -133,6 +135,8 @@ $webtmp ||= $ENV{'WEBTMP'} || $systmp;
 open DEBUG, ">${systmp}/e.dbg"  if ($debug);
 
 &fetchIniFileData($ARGV[0], -1, 0);  #INITIALIZE GLOBAL .ini OPTIONS HERE.
+$savemarks = 1  unless (defined $savemarks);
+$nodialogselect = 1  unless (defined $nodialogselect);
 
 if ($0 =~ /exe$/io)   #FETCH COMMAND-LINE OPTIONS SINCE "-s" DOES NOT WORK IN PAR .exe'S?!
 {
@@ -149,8 +153,8 @@ if ($0 =~ /exe$/io)   #FETCH COMMAND-LINE OPTIONS SINCE "-s" DOES NOT WORK IN PA
 
 if ($v)
 {
-	$viewer ||= 'ROTextHighlight'  if ($0 =~ /vc\w*\.(?:exe|pl)$/io);
-	eval 'use Tk::XMLViewer; $haveXML = 1; 1'  unless ($0 =~ /vc\w*\.(?:exe|pl)$/io);
+	$viewer ||= 'ROTextHighlight'  if ($0 =~ /vc\w*\.(?:exe|pl)$/i);
+	eval 'use Tk::XMLViewer; $haveXML = 1; 1'  unless ($0 =~ /vc\w*\.(?:exe|pl)$/i);
 	eval 'use Tk::ROTextANSIColor; $AnsiColor = 1; 1'  unless ($noac);
 	if ($viewer =~ /TextHighlight/)
 	{
@@ -166,7 +170,7 @@ if ($v)
 	}
 	elsif ($viewer)
 	{
-		if ($viewer =~ /SuperText/o) {
+		if ($viewer =~ /SuperText/) {
 			$viewer = '';
 		} else {
 			eval "use Tk::$viewer; 1";
@@ -181,7 +185,7 @@ if ($v)
 }
 else
 {
-	$editor ||= 'TextHighlight'  if ($0 =~ /[ev]c\w*\.(?:exe|pl)$/io);
+	$editor ||= 'TextHighlight'  if ($0 =~ /[ev]c\w*\.(?:exe|pl)$/i);
 	eval 'use Tk::TextANSIColor; $AnsiColor = 1; 1'  unless ($noac);
 	if ($editor eq 'TextHighlight')
 	{
@@ -195,7 +199,7 @@ else
 	elsif ($editor)
 	{
 		eval "use Tk::$editor; 1";
-		if ($editor =~ /SuperText/o)
+		if ($editor =~ /SuperText/)
 		{
 			$SuperText = 1;
 			$editor = '';
@@ -219,9 +223,9 @@ unless (defined $focus)
 }
 $focus ||= 0;
 $focustab ||= $nobrowsetabs ? '' : 'Tab1';
-$focustab = 'Tab'.($focustab+1)  if ($focustab =~ /^\d+$/o);
+$focustab = 'Tab'.($focustab+1)  if ($focustab =~ /^\d+$/);
 
-#print DEBUG "-???- codetext=$codetext=\n"  if ($debug);
+print DEBUG $v ? "-VIEWING: ($pgmname) viewer=$viewer=\n" : "-EDITING: editor=$editor=\n"  if ($debug);
 if ($haveTextHighlight) {
 	%{$extraOptsHash{texthighlight}} = (-syntax => ($codetext||$havePerlCool), 
 			-autoindent => 1, 
@@ -253,7 +257,7 @@ use Tk::JFileDialog;
 
 #-----------------------
 
-$vsn = '6.64';
+$vsn = '6.66';
 
 $editmode = $v ? 'View' : 'Edit';
 
@@ -526,7 +530,7 @@ my $MinusN65pixmap = 0;
 if ($v)
 {
 #print DEBUG "-???- have=$haveXML=\n"  if ($debug);
-	$viewer = 'XMLViewer'  if ($haveXML && $0 !~ /vc\w*\.(?:exe|pl)$/io && $ARGV[0] =~ /\.(?:xml|xsd|xsl)$/io);
+	$viewer = 'XMLViewer'  if ($haveXML && $0 !~ /vc\w*\.(?:exe|pl)$/i && $ARGV[0] =~ /\.(?:xml|xsd|xsl)$/i);
 	if (!$bummer && $viewer eq 'XMLViewer') {
 		$PlusN65pixmap = $MainWin->Getimage('plusN65')  if (Tk->findINC('plusN65.gif'));
 		$MinusN65pixmap = $MainWin->Getimage('minusN65')  if (Tk->findINC('minusN65.gif'));
@@ -538,11 +542,11 @@ if ($v)
 		$textwidget = 'ROTextANSIColor'  if ($AnsiColor);
 		$textwidget = $ROSuperText ? 'ROSuperText' : 'SuperText'  if ($SuperText);
 	}
-	$SuperText = 0  if ($viewer && $viewer !~ /supertext/io);
+	$SuperText = 0  if ($viewer && $viewer !~ /supertext/i);
 }
 else
 {
-	$SuperText = 0  if ($editor && $editor !~ /supertext/io);
+	$SuperText = 0  if ($editor && $editor !~ /supertext/i);
 }
 $AnsiColor = 0  if ($textwidget =~ /^(?:ROText|Text|TextUndo)$/);
 my ($mytextrelief) = 'sunken';
@@ -1048,7 +1052,7 @@ $asdosButton = $mFrame->JBrowseEntry(
 		-takefocus => 1,
 		-browse => 1,
 		-browsecmd => sub { $opsysList{$activeTab}[$activeWindow] = $opsys },
-		-noselecttext => 1);
+		-noselecttext => $nodialogselect);
 $asdosButton->pack(
 		-side   => 'left',
 		-pady   => 0,
@@ -1505,14 +1509,13 @@ sub fetchIniFileData  #FINDS NEAREST .ini FILE & LOADS ANY USER-OPTIONS:
 		$argPath = '.'  if ($argPath eq $fid);   #JWT:ADDED 20130506 TO CAUSE THE SEARCH FOR ini FILES TO START IN DIRECTORY THE FILE IS IN (EVEN IF THE FILE NAME CONTAINS NO PATH INFO)!
 		my $argPathwSlash = $argPath;
 		$argPathwSlash .= '/'  unless ($argPathwSlash =~ m#\/$#);
-		$_ = ($0 =~ m#\/([^\/]+)$#o) ? $1 : $0;
-		s/(\w+)\.\w+$/$1\.ini/g;
+		($_ = $pgmname) =~ s/(\w+)\.\w+$/$1\.ini/g;
 
 		#LOOKING FOR AN .ini FILE:
 
-		if (-r  "${argPathwSlash}$_")   #1: THERE'S AN .ini FILE IN THE DIR WHERE THE FILE BEING EDITED IS - USE THAT!
+		$inidir = $argPathwSlash;
+		if (-r "${argPathwSlash}$_")   #1: THERE'S AN .ini FILE IN THE DIR WHERE THE FILE BEING EDITED IS - USE THAT!
 		{
-			$inidir = $argPathwSlash;
 			print DEBUG "+++ USING (${argPathwSlash}$_)! FOR INI (found in same dir as file being edited!\n"  if ($debug);
 		}
 		else  #2: CHECK ~/.myeprofiles FOR A MAPPING OF THE DIR WHERE THE FILE BEING EDIT IS, IF SO, USE THAT!
@@ -1535,7 +1538,7 @@ sub fetchIniFileData  #FINDS NEAREST .ini FILE & LOADS ANY USER-OPTIONS:
 					s/^(\w)\:/$1\^/o;   #PROTECT WINBLOWS DRIVE-LETTERS!
 					($srcPath, $profilePath) = split(m#\/?\:#o, $_, 2);
 					print DEBUG "******* ARGPATH=$argPath= curdir=$curdir= PROFILEPATH=$srcPath($profilePath)=\n"  if ($debug);
-					if ($argPath =~ /^$srcPath/ || ($curdir && $curdir =~ /^$srcPath/))
+					if ($argPath =~ /^$srcPath/)
 					{
 						$inidir = $profilePath;
 						print DEBUG "******* PATH FOUND IN PROFILE - WILL USE =$profilePath=\n"  if ($debug);
@@ -1548,17 +1551,21 @@ sub fetchIniFileData  #FINDS NEAREST .ini FILE & LOADS ANY USER-OPTIONS:
 	}
 	print DEBUG "--AFT-- ini dir=$inidir= EDITING FILE=$fid=\n"  if ($debug);
 
-	$inidir .= '/'  unless ($inidir =~ m#\/$#o);
-	$_ = ($0 =~ m#\/([^\/]+)$#o) ? $1 : $0;
-	s/(\w+)\.\w+$/$1\.ini/g;
-	%mimeTypes = ();
+	$inidir .= '/'  unless ($inidir =~ m#\/$#);
+	($_ = $pgmname) =~ s/(\w+)\.\w+$/$1\.ini/g;
 
+	$inidir =~ s#^\.#$curdir#;
+	$inidir = $curdir . '/'  unless ($inidir =~ m#^\/#);
+	my $tried = '';
 	while ($inidir) {  #4: TRY THE DIRECTORY'S PARENTS, UP TO AND INCLUDING "/":
 		print DEBUG "-0: trying (${inidir}$_)!\n"  if ($debug);
 		last  if (-r "${inidir}$_");
 		chop $inidir;
 		last  unless ($inidir);
-		$inidir =~ s#\/[^\/]+$#\/#o;
+		$tried = $inidir;
+		$inidir =~ s#[^\/]+$##o;
+		last  if ($inidir eq $tried);  #PREVENT ANY POSSIBLE INFINITE LOOPS!
+		$trycnt++;
 	}
 
 	print DEBUG "-after looking up to root, inidir=$inidir= homedir=$homedir= pgmhome=$pgmhome=\n"  if ($debug);
@@ -1580,8 +1587,8 @@ sub fetchIniFileData  #FINDS NEAREST .ini FILE & LOADS ANY USER-OPTIONS:
 		}
 	}
 
-	print DEBUG "-3: will use (${inidir}$_)!\n"  if ($debug);
-	foreach my $opt (qw(tabspacing notabs)) {  #SEPARATE VALUES ALLOWED FOR EACH WINDOW/TAB:
+	print DEBUG "===========will use (${inidir}$_)!\n"  if ($debug);
+	foreach my $opt (qw(tabspacing notabs kandrstyle)) {  #SEPARATE VALUES ALLOWED FOR EACH WINDOW/TAB:
 		if (defined ${$opt}) {
 			print DEBUG "--init instance-specific opt=$opt= value=${$opt}=\n"  if ($debug);
 			eval "\$${opt}{$at}[$aw] = \${$opt}";
@@ -1606,7 +1613,7 @@ sub fetchIniFileData  #FINDS NEAREST .ini FILE & LOADS ANY USER-OPTIONS:
 				print DEBUG "-!!!- opt starts w/cash! (=$opt= val=$val)!\n"  if ($debug);
 				eval "$opt = \"$val\";";
 			}
-			elsif ($opt && $opt =~ /^(?:tabspacing|notabs)$/o)  #SEPARATE VALUES ALLOWED FOR EACH WINDOW/TAB:
+			elsif ($opt && $opt =~ /^(?:tabspacing|notabs|kandrstyle)$/o)  #SEPARATE VALUES ALLOWED FOR EACH WINDOW/TAB:
 			{
 				print DEBUG "---- instance-specific opt=$opt= value=$val=\n"  if ($debug);
 				eval "\$${opt}{$at}[$aw] = \$val";
@@ -1621,10 +1628,8 @@ sub anyChanges
 {
 	my $tab = shift || $activeTab;
 	my $window = shift || $activeWindow;
-	return 0  if ($saveStatus{$tab}[$window] =~ /(?:essfully opened file\:|saved to file\:)/o
-			&& $saveStatus{$tab}[$window] !~ m#\/e\.src\.tmp\"#o);  #WE JUST OPENED, NO CHANGES!
-	return 1  if (length($textScrolled[$window]->get('1.0','3.0')) > 1);  #WE HAVE DATA, (CHANGES)!
-	return 0;  #WE HAVE NO DATA (EMPTY WINDOW - NO CHANGES)
+	print  "--editModified=".$textScrolled[$window]->editModified()."=\n"  if ($debug);
+	return $textScrolled[$window]->editModified();
 }
 
 sub newFn
@@ -1939,8 +1944,8 @@ sub newTabFn
 			$textScrolled[0]->Subwidget($textsubwidget)->addKate2ViewMenu($sections);
 			$textScrolled[1]->Subwidget($textsubwidget)->addKate2ViewMenu($sections);
 		}
-		if (open(T, "${cwd}.myemimes") 
-			|| open (T, "${homedir}.myemimes") || open (T, "${pgmhome}myemimes"))
+		if (!defined($mimeTypes{' -fetched!- '}) && (open (T, "${homedir}.myemimes")
+				|| open (T, "${pgmhome}myemimes")))
 		{
 			my ($fext, $ft);
 
@@ -1954,6 +1959,7 @@ sub newTabFn
 			}
 			close T;
 		}
+		$mimeTypes{' -fetched!- '} = 1;  #ONLY TRY ONCE TO FETCH!
 	}
 
 	$whichTextWidget = $textScrolled[0]->Subwidget($textsubwidget);
@@ -2407,6 +2413,7 @@ sub saveSelected
 			-HistUsePath => (defined $histpath) ? $histpath : -1,
 			-HistUsePathButton => $histpathbutton,
 			-DestroyOnHide => $Steppin,
+			-noselecttext => $nodialogselect,
 			-Create => 1);
 
 	my $fid = $fileDialog->Show;
@@ -2665,6 +2672,7 @@ sub getcmdfile          #PROMPT USER FOR NAME OF DESIRED COMMAND FILE.  RETURNS 
 			-HistUsePath => (defined $histpath) ? $histpath : -1,
 			-HistUsePathButton => $histpathbutton,
 			-DestroyOnHide => $Steppin,
+			-noselecttext => $nodialogselect,
 			-Create => 1);
 	$intext = $fileDialog->Show;
 	chomp($intext);
@@ -2940,7 +2948,8 @@ sub fetchdata
 		{
 			$_ .= " backup=$backupct."  if ($backupct =~ /\d/o);
 		}
-		&setStatus( $_);
+		&setStatus($_);
+		$whichTextWidget->editModified(0);
 		return 1  if ($v);
 
 		if ($SuperText)  #ADDED 20080411 TO BLOCK CHANGES FOR UNDO.
@@ -2976,6 +2985,7 @@ sub appendfile
 			-HistUsePath => (defined $histpath) ? $histpath : -1,
 			-HistUsePathButton => $histpathbutton,
 			-DestroyOnHide => $Steppin,
+			-noselecttext => $nodialogselect,
 			-Create => 0);
 
 	$fid = $fileDialog->Show;
@@ -3110,10 +3120,13 @@ sub write2file
 		&saveMarks($fid, $activeWindow)  if ($saveopt == 3 || !$doNOTsaveMarks);
 	}
 	&setStatus("..Edits " . ($appendit ? 'appended' : 'saved') . " to file: \"$fid\".");
+	$textScrolled[$activeWindow]->editModified(0);
 }
 
 sub saveMarks
 {
+	return  unless ($savemarks);
+
 	my $ffid = $_[0] . '.emk';
 	if (defined $tagpath)
 	{
@@ -3203,11 +3216,13 @@ sub newSearch
 	eval { $whichTextWidget->tagAdd('savesel', 'sel.first', 'sel.last'); };
 	$srchTextVar = '';
 	my $primary = '';
+	my $yellowSel = '';
 	my $clipboard = '';
 
 	eval { $primary = $MainWin->SelectionGet(-selection => 'PRIMARY'); };
-	eval { $primary = $whichTextWidget->get('foundme.first','foundme.last') }
-			unless (defined($primary) && length($primary) > 0);
+	eval { $yellowSel = $whichTextWidget->get('foundme.first','foundme.last') }
+			unless (defined($primary) && length($primary) > 0
+					&& $primary !~ /\n/s);  #DON'T PASTE PRIMARY IF MULTILINE!
 	eval { $clipboard = $MainWin->SelectionGet(-selection => 'CLIPBOARD'); };
 
 	$startattop = 1  if ($newsearch);
@@ -3378,13 +3393,16 @@ sub newSearch
 			-underline => 0,
 			-command => sub
 		{
-			eval { $curTextWidget->insert('insert',$primary); $whichTextWidget->tagDelete('savesel') }
-					if (defined($primary) && length($primary) > 0);
-			eval { $activewidget->tagRemove('sel','0.0','end');};
+			if (defined($primary) && length($primary) > 0 && $primary !~ /\n/) {  #DON'T PASTE PRIMARY IF MULTILINE!
+				eval { $curTextWidget->insert('insert',$primary); $whichTextWidget->tagDelete('savesel') };
+				eval { $activewidget->tagRemove('sel','0.0','end'); };
+			} elsif ($yellowSel) {
+				eval { $curTextWidget->insert('insert',$yellowSel); $whichTextWidget->tagDelete('savesel') };
+			}
 		}
 	);
 	$pasteButton->configure(-state => 'disabled')
-			unless (defined($primary) && length($primary) > 0);
+			unless ($yellowSel || (defined($primary) && length($primary) > 0));
 
 	$pasteButton->pack(-side=>'left', -expand=>1, -pady => 6);
 	my $cbpasteButton = $btnframe->Button(
@@ -4334,16 +4352,24 @@ sub GlobalSrchRep
 	#".+PATTERN\n", REPLACE="``", AND SELECT "REGULAR-EXPRESSION!:
 	my $hasEOL = ($srchstr =~ s/\\n$/\$/s) ? ' + 1 char' : '';
 	print STDERR "--HASEOL=$hasEOL= srchstr NOW=$srchstr=\n"  if ($debug);
+	my $Srchpos;  #Current search posn + search str length ($lnoffset).
 	while (1)
 	{
 		$srchpos = $whichTextWidget->search(-forwards, $srchopts, -count => \$lnoffset, '--', $srchstr, $srchpos, 'end');
 		last  if not $srchpos;
 		$selend = $whichTextWidget->index('selendmk');
-		last  if ($srchpos > $selend);
+		$Srchpos = $whichTextWidget->index("$srchpos + $lnoffset char");
+		if ($Srchpos > $selend) {
+			#MUST COMPARE DECIMAL PART (column) TOO B/C ie. 1.2 IS *LESS THAN* 1.10!:
+			my ($posRow, $posCol) = split(/\./o, $Srchpos);
+			my ($endRow, $endCol) = split(/\./o, $selend);
+			last  if ($posRow > $endRow ||
+					($posRow == $endRow && $posCol > $endCol));
+		}
 		$whichTextWidget->markSet('insert',$srchpos);
 		$whichTextWidget->see($srchpos);
 		$whichTextWidget->tagDelete('foundme');
-		$whichTextWidget->tagAdd('foundme', $srchpos, "$srchpos + $lnoffset char");
+		$whichTextWidget->tagAdd('foundme', $srchpos, $Srchpos);
 		$whichTextWidget->tagConfigure('foundme',
 				-relief => 'raised',
 				-borderwidth => 1,
@@ -4378,13 +4404,17 @@ sub GlobalSrchRep
 		}
 		&beginUndoBlock($whichTextWidget);
 		$whichTextWidget->delete('foundme.first',"foundme.last$hasEOL")  unless ($v);
+
+		#PROGRAMMER NOTE:  "$Srchpos" NO LONGER VALID AFTER HERE!:
+
 		my $prevcsr = $whichTextWidget->index('insert');
 		$whichTextWidget->insert('insert',$chgstr)  unless ($v);
 		&endUndoBlock($whichTextWidget);
 		#JWT:NOTE, SOME TEXTWIDGETS LEAVE THE INSERT CURSOR AT THE BEGINNING OF WHAT WAS INSERTED, SO COMPENSATE:
 		if (!$v && $whichTextWidget->compare($prevcsr,'==',$whichTextWidget->index('insert'))) {
-			$srchpos + $whichTextWidget->index("$srchpos + $lnoffset char");;
+			$srchpos = $whichTextWidget->index("$srchpos + $lnoffset char");
 print STDERR "w:INFINITE LOOP AVOIDED (srchpos increased by=$lnoffset= to=$srchpos=\n";
+			print DEBUG "w:INFINITE LOOP AVOIDED (srchpos increased by=$lnoffset= to=$srchpos=\n"  if ($debug);
 		}
 		$whichTextWidget->tagDelete('foundme');
 		$lnoffset = length($chgstr) || 1;
@@ -4405,7 +4435,6 @@ print STDERR "w:INFINITE LOOP AVOIDED (srchpos increased by=$lnoffset= to=$srchp
 	my $chgd = (length($replstr) > 0) ? '/changed' : '';
 	&setStatus( "..$tagcnt matches of \"$srchstr\" found${chgd}!");
 	$whichTextWidget->tagAdd('sel', 'selstartmk', 'selendmk');
-
 }
 
 sub shocoords
@@ -5518,6 +5547,9 @@ sub jumpToTag
 
 sub add2hist {
 	my $fid = shift;
+
+	$fid =~ s#\/[^\/]+?\/\.\.\/#\/#;  #CLEAN UP ANY "/path/subpath/../more" => "/path/more".
+	$fid =~ s#\.\/##g;                #CLEAN UP ANY "/path/./more" => "/path/more".
 	my @histlist = ("$fid\n");
 	if (open(T, $histFile))
 	{
@@ -5695,7 +5727,8 @@ Default:  I<~/> ($HOME).
 =item B<-kandrstyle>=I<0|1|2>
 
 Specify K&R-style Perl stmts. when inserting into code or 
-reformatting.  I<0>: "if ()\n{"; I<1>: "if (){"; I<2>: "if () {".
+reformatting.  I<0>: "if ()\n{"; I<1>: "if (){"; I<2>: "if () {".  
+This option can be path-specific.
 Default:  I<0> (vertically-aligned, non-K&R style) formatting.
 
 =item B<-l>=I<line#[.col#]>

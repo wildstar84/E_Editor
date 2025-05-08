@@ -48,6 +48,13 @@ DESCRIPTION
     Drop files is available for M$-Windows users.
 
 OPTIONS
+    Note: "Path-specific options can have separate values for each file
+    being edited / viewed based on the path of that file and the presence of
+    a .ini file in that file's path or the one that that path references in
+    the profiles file, if any. Other options will have the same value for
+    all files being edited / viewed based on the .ini file chosen at
+    startup.
+
     -bg=*background-color*
         Change (default unhighlighted) text foreground color. Default:
         *green*. NOTE: Can also be combined with -c and -palette.
@@ -121,8 +128,9 @@ OPTIONS
 
     -kandrstyle=*0|1|2*
         Specify K&R-style Perl stmts. when inserting into code or
-        reformatting. *0*: "if ()\n{"; *1*: "if (){"; *2*: "if () {".
-        Default: *0* (vertically-aligned, non-K&R style) formatting.
+        reformatting. *0*: "if ()\n{"; *1*: "if (){"; *2*: "if () {". This
+        option can be path-specific. Default: *0* (vertically-aligned,
+        non-K&R style) formatting.
 
     -l=*line#[.col#]*
         Start with cursor on that line# / column#. NOTE: Line#s are
@@ -139,7 +147,8 @@ OPTIONS
         tab shows).
 
     -notabs=*0|1*
-        Pad indentations with 0=tabs, or 1=spaces. Default: *0*: tabs.
+        Pad indentations with 0=tabs, or 1=spaces. This option can be
+        path-specific. Default: *0*: tabs.
 
     -palette=*color-palette-name*
         Name of color-palette to use, specified in .Xdefaults. Default
@@ -163,7 +172,8 @@ OPTIONS
         Default: (editor: *1*, viewer: *0*).
 
     -tabspacing=*#*
-        Number of spaces equivalent to a tab when indenting. Default: *3*.
+        Number of spaces equivalent to a tab when indenting. This option can
+        be path-specific. Default: *3*.
 
     -theme=*themename*
         Name of color theme to start up in. For list of themes, view/edit

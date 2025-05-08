@@ -502,9 +502,9 @@ sub perlFn2
 		}
 	}
 	my ($x) = '';
-	my $spacesperTab = $tabspacing || 3;
+	my $spacesperTab = $tabspacing{$activeTab}[$activeWindow] || $tabspacing || 3;
 	my $tspaces = ' ' x $spacesperTab;
-	my $indentStr = $notabs ? $tspaces : "\t";
+	my $indentStr = $notabs{$activeTab}[$activeWindow] ? $tspaces : "\t";
 #	my $indentLen = length($indentStr);
 	
 	$x = $1  if ($lastline =~ /^(\s+)/);
@@ -512,17 +512,18 @@ sub perlFn2
 #	$x =~ s/\t/   /g;
 #	$x =~ s/   /\t/g;
 	$x =~ s/\t/$tspaces/g;
-	$x =~ s/$tspaces/\t/g  unless ($notabs);
+	$x =~ s/$tspaces/\t/g  unless ($notabs{$activeTab}[$activeWindow]);
 	my ($xb) = $x;
-#print "-addblock0: x=$x= xb=$xb= kandr=$kandrstyle= lc=$lastchar= ll=$lastline=\n";
+#print "-addblock0: x=$x= xb=$xb= kandr=$kandrstyle{$activeTab}[$activeWindow]= lc=$lastchar= ll=$lastline=\n";
 #	$x = $indentStr . $x  if ($lastline =~ /\{\s*$/ || $lastchar eq '{');  #CHGD. TO NEXT 20070727 TO FIX INDENTING IN K&R BLOCKS:
-	$x = $indentStr . $x  if ((!$kandrstyle && $lastline =~ /\{\s*$/o) || $lastchar eq '{');
+	$x = $indentStr . $x  if ((!$kandrstyle{$activeTab}[$activeWindow]
+			&& $lastline =~ /\{\s*$/o) || $lastchar eq '{');
 
 	my $beginbb = $x;
-	$beginbb = ''   if ($kandrstyle == 1);
-	$beginbb = ' '  if ($kandrstyle == 2);
+	$beginbb = ''   if ($kandrstyle{$activeTab}[$activeWindow] == 1);
+	$beginbb = ' '  if ($kandrstyle{$activeTab}[$activeWindow] == 2);
 
-	my $endbb = $kandrstyle ? '' : "\n";
+	my $endbb = $kandrstyle{$activeTab}[$activeWindow] ? '' : "\n";
 	
 #print "-ll ends in curly: x=$x=\n"  if ($lastline =~ /\{\s*$/ || $lastchar eq '{');
 	$tabcnt = length($x);
@@ -539,8 +540,8 @@ sub perlFn2
 #print "-BEFORE- insstr=$insstr= x=$x= sp=$startpos= x=$x= supertext=$SuperText=\n";
 		$textScrolled[$activeWindow]->insert($startpos, $insstr);
 		$curskip += $tabcnt + 2;
-#print "---- kr=$kandrstyle= inlen=$inlen= style=$sameline=\n";
-		if ($kandrstyle && $inlen)
+#print "---- kr=$kandrstyle{$activeTab}[$activeWindow]= inlen=$inlen= style=$sameline=\n";
+		if ($kandrstyle{$activeTab}[$activeWindow] && $inlen)
 		{
 			$textScrolled[$activeWindow]->markSet('insert',$curpos);
 		}
@@ -577,7 +578,7 @@ sub perlFn2
 		$textScrolled[$activeWindow]->insert('insert', $insstr);
 		$textScrolled[$activeWindow]->markSet('insert',$endpos);
 		$textScrolled[$activeWindow]->tagRemove('sel','0.0','end');
-		if ($kandrstyle && $inlen)
+		if ($kandrstyle{$activeTab}[$activeWindow] && $inlen)
 		{
 			$textScrolled[$activeWindow]->tagAdd('sel', $curpos, $endpos);
 		}
@@ -602,7 +603,7 @@ sub perlFn2
 		$insstr2 = "else$endbb$beginbb"."{\n$x}\n";
 		$curpos += 1.0;
 		$curpos .= '.0';
-		&addblock($kandrstyle);
+		&addblock($kandrstyle{$activeTab}[$activeWindow]);
 		$curskip = $tabcnt + 4;
 		$textScrolled[$activeWindow]->markSet('insert',"$startpos + $curskip char");
 	}
@@ -642,10 +643,10 @@ sub perlFn2
 		&addblock($addblockOpt);
 #print "-BEF- cs=$curskip=\n";
 		$curskip += length($intext);
-		$curskip++  if ($kandrstyle == 2);
-		$curskip += $tabcnt + 1  unless ($kandrstyle);
+		$curskip++  if ($kandrstyle{$activeTab}[$activeWindow] == 2);
+		$curskip += $tabcnt + 1  unless ($kandrstyle{$activeTab}[$activeWindow]);
 #print "-???- STARTPOS=$startpos= CURSKIP=$curskip= tc=$tabcnt= l=".length($intext)."=\n";
-#		--$startpos  if ($kandrstyle);
+#		--$startpos  if ($kandrstyle{$activeTab}[$activeWindow]);
 		$textScrolled[$activeWindow]->markSet('insert',"$startpos + $curskip char");
 	}
 	elsif ($which == 5)     #IF-THEN
@@ -699,11 +700,11 @@ sub perlFn2
 	}
 	elsif ($which == 10)  #FIX TABS => 2 CHARS.
 	{
-		&fixTabs(1,$tabspacing||3);
+		&fixTabs(1,$tabspacing{$activeTab}[$activeWindow]||$tabspacing||3);
 	}
 	elsif ($which == 11)  #FIX SPACES(2) => TABS.
 	{
-		&fixTabs(2,$tabspacing||3);
+		&fixTabs(2,$tabspacing{$activeTab}[$activeWindow]||$tabspacing||3);
 	}
 	&endUndoBlock($textScrolled[$activeWindow])  unless ($which == 4 || $which == 8);
 }
@@ -722,9 +723,9 @@ sub reallign
 {
 	my ($wholething, $selstart, $selend);
 
-	my $spacesperTab = $tabspacing || 3;
+	my $spacesperTab = $tabspacing{$activeTab}[$activeWindow] || $tabspacing || 3;
 	my $tspaces = ' ' x $spacesperTab;
-	my $indentStr = $notabs ? $tspaces : "\t";
+	my $indentStr = $notabs{$activeTab}[$activeWindow] ? $tspaces : "\t";
 	my $curposn = $textScrolled[$activeWindow]->index('insert');
 	eval
 	{
@@ -825,21 +826,21 @@ sub reallign
 		$hereend = $1  if ($lines[$i] =~ /\<\<[\'\"]?(\w+)/);  #CHECK `HERE-STRINGS.
 		if ($lines[$i] =~ /\}\s*(else.*|elsif.*)\{\s*$/)   #HANDLE STUFF LIKE "} else {".
 		{
-#print "($i) case 1: BEF($current_indent) K&R=$kandrstyle= LINE=$lines[$i]=\n";
+#print "($i) case 1: BEF($current_indent) K&R=$kandrstyle{$activeTab}[$activeWindow]= LINE=$lines[$i]=\n";
 			my $elsepart = $1;
 			$elsepart =~ s/\s+$//o;
 			my $paddit = "\n";
 			my $prev_ind = $current_indent;
 			$current_indent--  if ($current_indent);
-			$paddit = $kandrstyle ? '' : ("\n". ($indentStr x $current_indent));
-			$paddit = ' '  if ($kandrstyle == 2);
+			$paddit = $kandrstyle{$activeTab}[$activeWindow] ? '' : ("\n". ($indentStr x $current_indent));
+			$paddit = ' '  if ($kandrstyle{$activeTab}[$activeWindow] == 2);
 			$lines[$i] = ($indentStr x $current_indent) . "}$paddit" 
 					. $elsepart . $paddit  . "{";
-			$current_indent = $prev_ind  if ($kandrstyle);
+			$current_indent = $prev_ind  if ($kandrstyle{$activeTab}[$activeWindow]);
 #print "($i) case 1: AFT($current_indent) els=$elsepart= LINE=$lines[$i]=\n";
 		}
 #print "---THIS line($i)=$lines[$i]= LAST=$lastline=\n";
-		if (!$kandrstyle && $lines[$i] =~ /\S\s*\{\s*$/o)  #FIX K & R-STYLE BRACES.
+		if (!$kandrstyle{$activeTab}[$activeWindow] && $lines[$i] =~ /\S\s*\{\s*$/o)  #FIX K & R-STYLE BRACES.
 		{
 #print "($i) case 2\n";
 			$lines[$i] =~ s/\s*\{\s*$//o;
@@ -864,7 +865,7 @@ sub reallign
 				{
 					$lines[$i] = ($indentStr x $current_indent) . "}$one";
 				}
-				elsif (!$kandrstyle)
+				elsif (!$kandrstyle{$activeTab}[$activeWindow])
 				{
 					$lines[$i] = ($indentStr x $current_indent) . "}\n"
 							. ($indentStr x $current_indent) . $one;
@@ -895,9 +896,9 @@ sub reallign
 	$textScrolled[$activeWindow]->markSet('insert',$selstart);
 	$textScrolled[$activeWindow]->delete($selstart, $selend);
 	$wholething = join("\n",@lines) . "\n";
-	if ($kandrstyle)
+	if ($kandrstyle{$activeTab}[$activeWindow])
 	{
-		my $paddit = $kandrstyle == 2 ? ' ' : '';
+		my $paddit = $kandrstyle{$activeTab}[$activeWindow] == 2 ? ' ' : '';
 #$wholething = "
 #}
 #
@@ -1073,7 +1074,7 @@ sub findFns
 	$srchstr = $srchTextVar = 'PROCEDURE '
 		if ($cmdfile{$activeTab}[$activeWindow] =~ /\.mod$/io);
 
-print "-findFns: srch=$srchTextVar= cmdfile($activeTab/$activeWindow)=$cmdfile{$activeTab}[$activeWindow]=\n";
+	print DEBUG "-findFns: srch=$srchTextVar= cmdfile($activeTab/$activeWindow)=$cmdfile{$activeTab}[$activeWindow]=\n"  if ($debug);
 	$srchopts = '-regexp';
 	&GlobalSrchRep($whichTextWidget, 1);
 }

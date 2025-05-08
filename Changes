@@ -206,11 +206,11 @@ Changes:
 		function.
 		- Remove [Exit] ([Save]+[Quit]) button to reduce clutter (redundant).
 6.36    -NOT RELEASED-
-		- Add some old PC-Write(tm) key bindings I used back in the day, namely 
-		Shift-Insert (Insert blank line), Shift-Delete (Delete current line), 
-		Ctrl-BackSpace (Delete word left), Ctrl-Delete (Delete word right), 
-		Alt-BackSpace (Delete to start of line), and Alt-Delete (Delete to end 
-		of line.
+		- Add some old PC-Write(tm) key bindings I used back in the day, 
+		namely Shift-Insert (Insert blank line), Shift-Delete (Delete current 
+		line), Ctrl-BackSpace (Delete word left), Ctrl-Delete (Delete word 
+		right), Alt-BackSpace (Delete to start of line), and Alt-Delete 
+		(Delete to end of line.
 6.40    -NOT RELEASED-
 		- Add & fix some SuperText bindings for consistancy w/SuperText when 
 		not using SuperText, and make work with latest TextHighlight v2+.  
@@ -358,3 +358,35 @@ v6.43   24/07/16
 		- Correct .ini file lookup order to fix some edge cases.
 		- Minor code-cleanups.
 		- Also includes v6.63 changes.
+6.65		-NOT RELEASED-
+		- Add -kandrstyle option to list of options that can be set in 
+		different editing panes based in which .ini file applies to a given 
+		file being edited/viewed (see also v6.63 changes above).
+		- Tweak to make sure the -savemarks option is properly defaulted and 
+		enforced.
+6.66		25/05/08
+		- Include all v6.65 (not released) changes.
+		- Fix issues with how the "program's home directory" (fallback 
+		location for seeking certain system-wide config. & .ini files - 
+		should be either bin/ or share/E/ based on the ../bin/ directory the 
+		program script resides in, ie. /usr/local/bin/e.pl: /usr/local/bin/ 
+		and /usr/local/share/E/.
+		- Fix more issues affecting .ini-file lookup when opening a file.
+		- Prevent pasting the selection into the "Search For" dialog if it is 
+		multiline!
+		- Fix issues that sometimes caused global-searches to fail. 
+		- Add "-nodialogselect" option (default 1/true) to prevent file-open 
+		dialogs from clobbering the PRIMARY paste-buffer when selecting a file 
+		to open (previously was clobbering it setting it to the full path of 
+		the file one was opening.  Set to 0/false to keep old (latter) 
+		behaviour, or manually select the file-name itself just before opening.
+		- Only look up file-extension mimetypes (which can determine which 
+		language formatter) once & no longer search the current directory 
+		for .myemimes config file (not sure why we were).
+		- Some slight code-efficiency improvements.
+		- Now use the underlying Text widget's editModified() method to 
+		determine whether a file has been modified (whether to prompt for 
+		saving changes) before quitting.  Previously used so holistic logic to 
+		try to determine this, but this is more accurate.
+		- Ensure that the language-specific submodules (e_*.pl) also apply 
+		options that can (now) be set in different editing panes.
