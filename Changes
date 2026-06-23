@@ -390,3 +390,7 @@ v6.43   24/07/16
 		try to determine this, but this is more accurate.
 		- Ensure that the language-specific submodules (e_*.pl) also apply 
 		options that can (now) be set in different editing panes.
+6.67		26/06/22
+		- Add [Shift-[Ctrl-[K]]] keyboard binding to delete to beg. of line.
+		- Fix a potential segfault on exit.
+		- Remove some unnecessary code from JCutCopyPaste.pl

@@ -257,7 +257,7 @@ use Tk::JFileDialog;
 
 #-----------------------
 
-$vsn = '6.66';
+$vsn = '6.67';
 
 $editmode = $v ? 'View' : 'Edit';
 
@@ -2209,7 +2209,7 @@ sub newTabFn
 				}
 				Tk->break;
 			});
-			$tw->bind($cls, '<Alt-BackSpace>' => sub{
+			$tw->bind($cls, '<Alt-BackSpace>' => sub{  #ERACE-2-BOL:
 				my $w = shift;
 				if($w->compare('insert','==','1.0')) {return;}
 				if($w->compare('insert','==','insert linestart')) {
@@ -2219,7 +2219,17 @@ sub newTabFn
 				}
 				Tk->break;
 			});
-			$tw->bind($cls, '<Alt-Delete>' => sub{
+			$tw->bind($cls, '<Control-K>' => sub{  #(Shift-Control-k)
+				my $w = shift;
+				if($w->compare('insert','==','1.0')) {return;}
+				if($w->compare('insert','==','insert linestart')) {
+					$w->delete('insert - 1c');
+				} else {
+					$w->delete('insert linestart','insert');
+				}
+				Tk->break;
+			});
+			$tw->bind($cls, '<Alt-Delete>' => sub{  #ERACE-2-EOL:
 				my $w = shift;
 				if($w->compare('insert','==','insert lineend')) {
 					$w->delete('insert');
@@ -4811,6 +4821,7 @@ sub showbkupFn
 {
 	my $bk = ($backupct =~ /\d/o) ? $backupct : 'data';
 	&setStatus("..Last backup file was: \"$hometmp/e.${bk}.tmp\".");
+	&toClipboard("$hometmp/e.${bk}.tmp");
 }
 
 sub doMyCopy
@@ -5443,6 +5454,7 @@ print DEBUG "-SaveOnDestroy:  args=".join('|',@_)."= nst=$newsupertext=\n"  if (
 	my $awin = (defined $_[0]) ? shift : $activeWindow;
 	my $aTab = (defined $_[0]) ? shift : $activeTab;
 	my $w = (defined $_[0]) ? shift : $textScrolled[$awin];
+	return  unless (defined $w);  #JWT:ADDED 202604 TO TRY TO AVOID SEGFAULTS ON EXIT.
 
 	my $saveActiveWindow = $activeWindow;
 	$activeWindow = $awin;
@@ -5473,7 +5485,7 @@ print DEBUG "-SaveOnDestroy:  args=".join('|',@_)."= nst=$newsupertext=\n"  if (
 	{
 		print DEBUG "e:Could not back up file to \"$tofid\"!";
 	}
-	my $activeWindow = $saveActiveWindow;
+	$activeWindow = $saveActiveWindow;
 }
 
 sub jumpToTag

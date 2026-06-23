@@ -59,18 +59,12 @@ sub doPaste
 		{
 			$clipboard = join('',<CLIPBRD>);
 			close CLIPBRD;
-			if (open(CLIPBRD,">$ENV{CLIPBOARD_FID}"))
+			eval
 			{
-				binmode CLIPBRD;
-				print CLIPBRD $clipboard;
-				close CLIPBRD;
-				eval
-				{
-					$MainWin->SelectionOwn(-selection => 'CLIPBOARD');
-					$MainWin->clipboardClear;
-					$MainWin->clipboardAppend('--',$clipboard);
-				}  if (length($clipboard) > 0);  #COPY THE CLIPBOARD_FID CONTENT BACK INTO CLIPBOARD:
-			}
+				$MainWin->SelectionOwn(-selection => 'CLIPBOARD');
+				$MainWin->clipboardClear;
+				$MainWin->clipboardAppend('--',$clipboard);
+			}  if (length($clipboard) > 0);  #COPY THE CLIPBOARD_FID CONTENT BACK INTO CLIPBOARD:
 		}
 		$activewidget->tagDelete('sel');  #NEXT 2 ADDED 20100708 TO PREVENT COPIED/PASTED
 		$activewidget->SelectionClear();  #TEXT FROM STAYING SELECTED IN BOTH PLACES!
